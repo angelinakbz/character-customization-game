@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>Welcome kittens!</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<h1>Welcome kittens!</h1>
+	<div style="text-align:center;margin:12px 0">
+ 		<button id="cat-btn" class="btn" style="padding:8px 12px;border-radius:8px;border:none;background:#ff66b2;color:#fff">click to see cat content(last is the best)</button>
+		<button id="group-btn" class="btn" style="padding:8px 12px;border-radius:8px;border:none;background:#7c3aed;color:#fff;margin-left:8px">click to see cute photos</button>
+
+	</div>
+
+	<div class="image-row">
+		<img src="download (68).jpeg" class="cat-image" alt="A cute kitten sitting on a windowsill, looking outside with big curious eyes">
+		<p class="center-text">Customize your character by clicking play!</p>
+		<img src="instagram question sticker _ pixbabe_x0.jpeg" class="sticker-image" alt="Instagram question sticker">
+	</div>
+	<div class="doodle-wrap">
+		<!-- Inline SVG doodle (embedded directly in the page) -->
+		<svg class="doodle" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="doodle">
+			<rect width="100%" height="100%" fill="#fff6fb" rx="12" />
+			<g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
+				<path d="M20 200c60-90 120-90 180-50s120 90 220 10" stroke="#ff9fc9" />
+				<path d="M30 140c70-60 140-40 200-10s140 40 190-20" stroke="#ffd6e8" />
+				<path d="M60 70c50 30 120 20 180 10s120 0 160-30" stroke="#ffa3d1" />
+			</g>
+			<g>
+				<circle cx="80" cy="220" r="12" fill="#ff7bac" />
+				<circle cx="180" cy="240" r="10" fill="#ffb3d6" />
+				<circle cx="300" cy="200" r="14" fill="#ffc9e6" />
+			</g>
+		</svg>
+
+		<!-- Red overlay button positioned over the doodle -->
+		<button type="button" id="enter-game" class="overlay-button" aria-label="enter game">Play</button>
+	</div>
+
+	<!-- Home button (shown during game mode) -->
+	<!-- Game screen heading (visible in game mode) -->
+	<div id="game-screen" class="center-text game-screen pet-text" role="status" aria-live="polite">Choose your character</div>
+
+	<button type="button" id="home-button" class="home-button" aria-label="go home">Home</button>
+
+	<!-- Character chooser (visible during game mode) -->
+	<div id="character-chooser" class="character-chooser" aria-hidden="true">
+		<button type="button" id="prev-char" class="char-arrow" aria-label="previous character">◀</button>
+		<div class="char-stage">
+			<img id="char-image" src="" alt="character option">
+			<div id="char-caption" class="char-caption"></div>
+		</div>
+		<button type="button" id="next-char" class="char-arrow" aria-label="next character">▶</button>
+		<button type="button" id="shuffle-char" class="shuffle-button" aria-label="shuffle characters">🔀</button>
+		<button type="button" id="select-char" class="select-button" aria-label="select character">Select</button>
+	</div>
+
+		<!-- Pet selection screen (shown after selecting a character) -->
+		<div id="pet-screen" class="center-text pet-screen" role="status" aria-live="polite">Choose your pet</div>
+
+	<script src="script.js"></script>
+
+	<!-- Cat viewer overlay -->
+	<div id="cat-viewer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);align-items:center;justify-content:center;z-index:9999">
+		<div style="position:relative;max-width:90%;max-height:90%;margin:auto">
+			<img id="cat-viewer-img" src="" alt="cat" style="display:block;max-width:100%;max-height:80vh;border-radius:12px;cursor:pointer;" />
+			<button id="cat-viewer-close" style="position:absolute;right:-8px;top:-8px;border-radius:50%;width:36px;height:36px;border:none;background:#fff;color:#ff66b2;font-weight:800;cursor:pointer">×</button>
+			<div id="cat-viewer-hint" style="text-align:center;color:#fff;margin-top:8px">Click the image to see the next photo</div>
+		</div>
+	</div>
+
+	<!-- Group kawai viewer overlay -->
+	<div id="group-viewer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;z-index:10000">
+		<div style="position:relative;max-width:90%;max-height:90%;margin:auto">
+			<img id="group-viewer-img" src="" alt="group" style="display:block;max-width:100%;max-height:80vh;border-radius:12px;cursor:pointer;" />
+			<button id="group-viewer-close" style="position:absolute;right:-8px;top:-8px;border-radius:50%;width:36px;height:36px;border:none;background:#fff;color:#7c3aed;font-weight:800;cursor:pointer">×</button>
+			<div id="group-viewer-hint" style="text-align:center;color:#fff;margin-top:8px">Click the image to see the next photo</div>
+		</div>
+	</div>
+
+	<script>
+
+
+	(function(){
+		const images = [
+			'Oiia Cat noir.jpeg',
+			'Woah Tikki, U good__.jpeg',
+			'download - 2026-06-21T211847.554.jpeg',
+			'download - 2026-06-21T212036.135.jpeg'
+		];
+		let idx = 0;
+		const btn = document.getElementById('cat-btn');
+		const viewer = document.getElementById('cat-viewer');
+		const img = document.getElementById('cat-viewer-img');
+		const close = document.getElementById('cat-viewer-close');
+		function show(i){ idx = i % images.length; img.src = images[idx]; viewer.style.display = 'flex'; }
+		function next(){ idx = (idx + 1) % images.length; img.src = images[idx]; }
+		if (btn){ btn.addEventListener('click', ()=> show(0)); }
+		if (img){ img.addEventListener('click', next); }
+		if (close){ close.addEventListener('click', ()=> viewer.style.display='none'); }
+		// allow ESC to close
+		window.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') viewer.style.display='none'; });
+	})();
+	</script>
+	<script>
+	(function(){
+		const images = [ 'C1544T01.JPG', 'Screenshot 2026-06-19 122006.png', 'DSC00784.JPG', 'DSC00794.JPG', 'DSC00789.JPG', 'DSC00799.JPG' ]; // more images can be added later
+		let idx = 0;
+		const btn = document.getElementById('group-btn');
+		const viewer = document.getElementById('group-viewer');
+		const img = document.getElementById('group-viewer-img');
+		const close = document.getElementById('group-viewer-close');
+		function show(i){ idx = i % images.length; img.src = images[idx]; viewer.style.display = 'flex'; }
+		function next(){ idx = (idx + 1) % images.length; img.src = images[idx]; }
+		if (btn) btn.addEventListener('click', ()=> show(0));
+		if (img) img.addEventListener('click', next);
+		if (close) close.addEventListener('click', ()=> viewer.style.display='none');
+		window.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') viewer.style.display='none'; });
+	})();
+	</script>
+</body>
+</html>
+
