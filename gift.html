@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your Gift Notepad</title>
+  <style>
+    body{margin:0;background:#fff7f9;font-family:system-ui,Segoe UI,Roboto,Arial;display:flex;align-items:center;justify-content:center;height:100vh}
+    .card{background:#fff;padding:20px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.08);width:90%;max-width:720px}
+    textarea{width:100%;height:300px;border-radius:8px;padding:12px;border:1px solid #ddd;font-size:16px}
+    .btn{padding:8px 12px;border-radius:8px;border:none;background:#ff66b2;color:#fff}
+    .row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Your Gift — Notepad</h2>
+    <textarea id="note" placeholder="Write your gift note here..."></textarea>
+    <div class="row">
+      <button id="save" class="btn">Save</button>
+      <button id="done" class="btn">Done</button>
+      <button id="sideQuest" class="btn">Interested in a side quest?</button>
+    </div>
+  </div>
+<script>
+(function(){
+  const note = document.getElementById('note');
+  const saved = localStorage.getItem('gift_note') || '';
+  note.value = saved;
+  document.getElementById('save').addEventListener('click', ()=>{ localStorage.setItem('gift_note', note.value); alert('Saved'); });
+  document.getElementById('done').addEventListener('click', ()=>{ localStorage.setItem('gift_note', note.value); window.location.href = 'character.html'; });
+  document.getElementById('sideQuest').addEventListener('click', ()=>{
+    localStorage.setItem('gift_note', note.value);
+    window.location.href = 'treasure.html';
+  });
+})();
+</script>
+<script src="reload-redirect.js"></script>
+</body>
+</html>

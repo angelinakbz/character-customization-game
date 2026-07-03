@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your Character</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body{margin:0;background:#fff7f9;font-family:system-ui,Segoe UI,Roboto,Arial}
+    .wrap{max-width:980px;margin:24px auto;padding:16px}
+    h2{color:#ff66b2;text-align:center}
+    .balance{font-weight:900;text-align:center;margin-bottom:12px}
+    .stage{display:flex;gap:16px;align-items:flex-start;justify-content:center}
+    .canvas{position:relative;width:360px;height:540px;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.06)}
+    .char-img{width:100%;height:100%;object-fit:contain;border-radius:12px;position:relative;z-index:1}
+    .overlay{position:absolute;pointer-events:none;z-index:2;mix-blend-mode:multiply;opacity:0.95;background:transparent}
+    .overlay.glasses{left:50%;top:30%;transform:translate(-50%, -10%);width:48%;}
+    .overlay.hat{left:50%;top:6%;transform:translate(-50%, -10%);width:60%;}
+    .overlay.purse{right:8%;bottom:10%;width:36%;transform:translateY(0);} 
+    .overlay.jewellery{left:50%;top:58%;transform:translate(-50%, -50%);width:40%;}
+    .controls{max-width:480px}
+    .items-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+    .item{background:#fff;border-radius:8px;padding:6px;text-align:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.04)}
+    .item img{width:100%;height:64px;object-fit:cover;border-radius:6px}
+    .btn{padding:8px 12px;border-radius:8px;border:none;background:#ff66b2;color:#fff}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>Your Character & Wardrobe</h2>
+    <div class="balance">Current balance: $<span id="bal">0</span></div>
+    <div class="stage">
+      <div class="canvas" id="canvas">
+        <img id="charImg" class="char-img" src="" alt="character">
+      </div>
+      <div class="controls">
+        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+          <div style="font-weight:800">Purchased Items</div>
+          <div><button id="clearOverlays" class="btn" style="background:#ddd;color:#333">Clear Overlays</button></div>
+        </div>
+        <div id="items" class="items-grid"></div>
+        <div style="margin-top:12px;text-align:center;display:flex;gap:8px;justify-content:center">
+          <button id="playWith" class="btn">Play with your character</button>
+          <button id="to-shop" class="btn">Back to Shop</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+(function(){
+  const balEl = document.getElementById('bal');
+  const purchases = JSON.parse(localStorage.getItem('purchases')||'[]');
+  const earned = parseInt(localStorage.getItem('earned')||'0',10) || 0;
+  balEl.textContent = earned;
+
+  // determine items to show: prefer a selectedOutfit (from outfit preview), otherwise use purchases
+  let charSrc = '';
+  let petSrc = '';
+  const allItems = [];
+  try{
+    const selectedOutfitRaw = localStorage.getItem('selectedOutfit');
+    if (selectedOutfitRaw){
+      const selectedOutfit = JSON.parse(selectedOutfitRaw||'{}');
+      if (selectedOutfit){
+        if (selectedOutfit.char) charSrc = selectedOutfit.char;
+        if (selectedOutfit.pet) petSrc = selectedOutfit.pet;
+        (selectedOutfit.items||[]).forEach(it=> allItems.push(it));
+      }
+    }
+  }catch(e){}
+  if (!allItems.length){
+    if (purchases.length){
+      const latestChar = purchases[purchases.length-1].char || '';
+      const filtered = purchases.filter(p => (p.char || '') === latestChar);
+      filtered.forEach(p=>{ if (p.char) charSrc = p.char; if (p.pet) petSrc = p.pet; (p.items||[]).forEach(it=> allItems.push(it)); });
+    }
+  }
+
+  const canvas = document.getElementById('canvas');
+  const charImg = document.getElementById('charImg');
+  // ensure we show the selected character even if there are no purchases
+  let effectiveCharSrc = charSrc;
+  if (!effectiveCharSrc){ try{ effectiveCharSrc = localStorage.getItem('selectedCharacter') || ''; }catch(e){}
+  }
+
+  function trySetCharImg(src){
+    if (!src) { charImg.src=''; charImg.style.background='#fff'; return; }
+    charImg.style.display = 'block';
+    charImg.onerror = function(){
+      try{ const alt = decodeURIComponent(src); if (alt !== src){ charImg.onerror=null; charImg.src = alt; return; } }catch(e){}
+      try{ const alt2 = decodeURI(src); if (alt2 !== src){ charImg.onerror=null; charImg.src = alt2; return; } }catch(e){}
+      try{ const alt3 = src.replace(/%20/g,' '); if (alt3 !== src){ charImg.onerror=null; charImg.src = alt3; return; } }catch(e){}
+      // hide if still failing
+      charImg.style.display = 'none';
+    };
+    charImg.src = src;
+  }
+
+  if (effectiveCharSrc) trySetCharImg(effectiveCharSrc);
+
+  const itemsContainer = document.getElementById('items');
+  // remove duplicates by filename
+  const unique = [];
+  const seen = new Set();
+  allItems.forEach(it=>{ if (!it.filename) return; if (!seen.has(it.filename)){ seen.add(it.filename); unique.push(it); } });
+
+  function createOverlay(it){
+    const img = document.createElement('img'); img.alt = it.type || '';
+    img.className = 'overlay ' + (it.type || '');
+    // attach a data attribute so we can remove it
+    img.dataset.filename = it.filename || '';
+    // process image to remove near-white background before appending
+    processImageToTrimWhite(it.filename || '', function(dataUrl){ img.src = dataUrl; canvas.appendChild(img); });
+  }
+  function removeOverlay(filename){
+    const nodes = Array.from(canvas.querySelectorAll('.overlay'));
+    nodes.forEach(n=>{ if (n.dataset.filename === filename) n.remove(); });
+  }
+
+  unique.forEach(it=>{
+    const div = document.createElement('div'); div.className='item';
+    const img = document.createElement('img'); img.src = it.filename || ''; img.alt = it.type || '';
+    const label = document.createElement('div'); label.style.fontSize='12px'; label.style.marginTop='6px'; label.textContent = it.type || '';
+    div.appendChild(img); div.appendChild(label);
+    let applied = false;
+    div.addEventListener('click', ()=>{
+      if (!applied){ createOverlay(it); div.style.boxShadow='0 6px 18px rgba(255,102,178,0.24)'; applied = true; }
+      else { removeOverlay(it.filename); div.style.boxShadow='0 6px 18px rgba(0,0,0,0.04)'; applied = false; }
+    });
+    itemsContainer.appendChild(div);
+  });
+
+  // if selectedOutfit exists, auto-apply all overlays and highlight items
+  try{
+    const selectedOutfitRaw = localStorage.getItem('selectedOutfit');
+    if (selectedOutfitRaw){
+      const selectedOutfit = JSON.parse(selectedOutfitRaw||'{}');
+      if (selectedOutfit && Array.isArray(selectedOutfit.items) && selectedOutfit.items.length){
+        // apply overlays
+        selectedOutfit.items.forEach(it=> createOverlay(it));
+        // visually mark corresponding items as applied
+        Array.from(itemsContainer.querySelectorAll('.item')).forEach(node=>{
+          const img = node.querySelector('img'); if (!img) return;
+          const imgSrc = String(img.src || img.dataset.src || '');
+          selectedOutfit.items.forEach(si=>{
+            const file = String(si.filename || '');
+            if (!file) return;
+            if (imgSrc === file || imgSrc.endsWith(file) || imgSrc.indexOf(file) !== -1) node.style.boxShadow='0 6px 18px rgba(255,102,178,0.24)';
+          });
+        });
+      }
+    }
+  }catch(e){}
+
+  document.getElementById('clearOverlays').addEventListener('click', ()=>{
+    Array.from(canvas.querySelectorAll('.overlay')).forEach(n=>n.remove());
+    Array.from(itemsContainer.querySelectorAll('.item')).forEach(it=> it.style.boxShadow='0 6px 18px rgba(0,0,0,0.04)');
+  });
+
+  // helper to strip near-white backgrounds for accessory images
+  function processImageToTrimWhite(src, cb){
+    try{
+      const img = new Image();
+      img.onload = function(){
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const ctx = c.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+        try{
+          const id = ctx.getImageData(0,0,w,h);
+          const data = id.data;
+          for (let i=0;i<data.length;i+=4){ const r=data[i], g=data[i+1], b=data[i+2]; if (r>240 && g>240 && b>240) data[i+3]=0; }
+          ctx.putImageData(id,0,0);
+          cb(c.toDataURL('image/png'));
+        }catch(e){ cb(src); }
+      };
+      img.onerror = function(){ cb(src); };
+      img.src = src;
+    }catch(e){ cb(src); }
+  }
+
+  document.getElementById('to-shop').addEventListener('click', ()=> window.location.href='accessories.html');
+  document.getElementById('playWith').addEventListener('click', ()=>{
+    // open the runner game with the current character and pet
+    const purchasesArr = JSON.parse(localStorage.getItem('purchases')||'[]');
+    let char = '';
+    let pet = '';
+    if (purchasesArr.length){
+      // use most recent char/pet if available
+      const last = purchasesArr[purchasesArr.length-1];
+      char = last.char || '';
+      pet = last.pet || '';
+    }
+    // fall back to persisted selections if no purchases
+    if (!char){ try{ char = localStorage.getItem('selectedCharacter') || ''; }catch(e){} }
+    if (!pet){ try{ pet = localStorage.getItem('selectedPet') || ''; }catch(e){} }
+    const qp = new URLSearchParams();
+    if (char) qp.set('char', char);
+    if (pet) qp.set('pet', pet);
+    window.location.href = 'play.html' + (qp.toString() ? ('?' + qp.toString()) : '');
+  });
+})();
+</script>
+<script src="reload-redirect.js"></script>
+</body>
+</html>

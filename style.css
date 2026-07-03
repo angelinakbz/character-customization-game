@@ -1,0 +1,391 @@
+body {
+	font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+	margin: 0;
+	padding: 1rem;
+	background: #ffd6e8;
+	color: #222;
+}
+
+h1 {
+	text-align: center;
+	margin-top: 0.2rem;
+}
+
+.game {
+	display: flex;
+	gap: 1.5rem;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 1rem;
+}
+
+.stage {
+	background: #fff;
+	border-radius: 8px;
+	padding: 1rem;
+	box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+.palette {
+	width: 220px;
+}
+
+.palette h2 {
+	margin: 0 0 0.5rem 0;
+	font-size: 1rem;
+}
+
+.buttons {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.outfit-button, #clear-button {
+	padding: 0.5rem 0.75rem;
+	border-radius: 6px;
+	border: 1px solid #ddd;
+	background: #fff;
+	cursor: pointer;
+	font-size: 0.95rem;
+}
+
+.outfit-button.active {
+	background: #e8f4ff;
+	border-color: #7fb8ff;
+}
+
+.outfit {
+	transition: opacity 180ms ease-in-out;
+	opacity: 1;
+}
+
+.outfit.hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+@media (max-width: 700px) {
+	.game { flex-direction: column; align-items: center; }
+	.palette { width: 100%; }
+}
+
+.doodle-wrap {
+	text-align: center;
+	margin: 1rem 0;
+}
+
+.doodle {
+	max-width: 80%;
+	height: auto;
+	display: inline-block;
+	border-radius: 8px;
+	box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+}
+
+/* overlay button styling */
+.doodle-wrap { position: relative; }
+.overlay-button {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%,-50%);
+	background: #ff3b3b;
+	color: white;
+	border: none;
+	padding: 0.75rem 1.25rem;
+	border-radius: 14px;
+	box-shadow: 0 10px 24px rgba(255,59,59,0.25);
+	cursor: pointer;
+	font-weight: 700;
+	font-size: 1.15rem;
+	min-width: 140px;
+	min-height: 52px;
+	z-index: 100000;
+	transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms;
+	pointer-events: auto;
+}
+
+.overlay-button:hover {
+	transform: translate(-50%,-50%) scale(1.03);
+	box-shadow: 0 14px 30px rgba(255,59,59,0.28);
+}
+
+.overlay-button:active {
+	transform: translate(-50%,-50%) scale(0.98);
+}
+
+@keyframes pulse {
+	0% { box-shadow: 0 6px 18px rgba(255,59,59,0.18); transform: translate(-50%,-50%) scale(1); }
+	50% { box-shadow: 0 18px 36px rgba(255,59,59,0.22); transform: translate(-50%,-50%) scale(1.06); }
+	100% { box-shadow: 0 6px 18px rgba(255,59,59,0.18); transform: translate(-50%,-50%) scale(1); }
+}
+
+.overlay-button.pulse { animation: pulse 2s infinite; }
+
+/* when in game mode hide all content except background */
+body.blank > * {
+	display: none !important;
+}
+
+.image-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+ 	max-width: 900px;
+ 	margin: 0.75rem auto;
+}
+
+.image-row img {
+	width: 220px;
+	max-width: 45%;
+	height: auto;
+	border-radius: 12px;
+	box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+}
+
+.image-row .center-text {
+	margin: 0;
+	text-align: center;
+	font-size: 1.6rem;
+	font-weight: 900;
+	color: #ff66b2;
+	background: #fff;
+	padding: 0.6rem 1rem;
+	border-radius: 12px;
+	box-shadow: 0 8px 30px rgba(255,31,91,0.18);
+	text-transform: uppercase;
+	letter-spacing: 0.6px;
+	flex: 0 1 260px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: transform 150ms ease;
+	animation: textPulse 2.4s infinite;
+}
+
+@keyframes textPulse {
+  0% { transform: scale(1); }
+ 50% { transform: scale(1.03); }
+ 100% { transform: scale(1); }
+}
+
+@media (max-width: 700px) {
+  .image-row .center-text { font-size: 1.1rem; padding: 0.5rem 0.75rem; letter-spacing: 0.4px; }
+}
+
+/* Home button visible in game mode */
+.home-button {
+	display: none;
+	position: fixed;
+	top: 18px;
+	left: 18px;
+	background: #ffffff;
+	color: #ff3b3b;
+	border: 2px solid #ff3b3b;
+	padding: 0.45rem 0.75rem;
+	border-radius: 8px;
+	z-index: 9999;
+	box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+	font-weight: 700;
+}
+
+/* override the blanket hide and show home when in game mode */
+body.blank > .home-button { display: block !important; }
+
+/* game screen shown when in game mode */
+.game-screen { display: none; }
+body.blank > .game-screen {
+	display: flex !important;
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 0.75rem 0;
+	z-index: 9998;
+}
+
+/* when using the shared pet-text style, ensure a white box appears in game mode */
+body.blank > .game-screen.pet-text {
+	background: rgba(255,255,255,0.95);
+	padding: 0.6rem 1.5rem;
+	font-size: 1.8rem;
+	flex: none;
+	margin-top: 6px;
+	z-index: 9999;
+}
+
+/* ensure the center-text styles adapt for top banner */
+.game-screen.center-text {
+	background: rgba(255,255,255,0.95);
+	padding: 0.6rem 1.5rem;
+	font-size: 1.8rem;
+	flex: none;
+	margin-top: 6px;
+}
+
+/* Pet selection screen: only visible when body.pet is set */
+.pet-screen { display: none; }
+/* hide everything when in pet mode, then show the pet-screen element */
+body.pet > * { display: none !important; }
+body.pet > .pet-screen {
+	display: flex !important;
+	position: fixed;
+	inset: 0;
+	align-items: center;
+	justify-content: center;
+	z-index: 100000;
+}
+
+/* make the pet-screen text match the prominent center-text style but without white box */
+.pet-screen.center-text {
+	background: transparent;
+	padding: 0;
+	font-size: 2rem;
+	font-weight: 900;
+	color: #ff66b2;
+	text-transform: uppercase;
+	letter-spacing: 0.6px;
+	box-shadow: none;
+}
+
+/* Pet page header and Back button */
+.back-button {
+	display: block;
+	position: fixed;
+	top: 18px;
+	left: 18px;
+	background: #ffffff;
+	color: #ff3b3b;
+	border: 2px solid #ff3b3b;
+	padding: 0.45rem 0.75rem;
+	border-radius: 8px;
+	z-index: 100002;
+	box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.pet-header {
+	position: fixed;
+	top: 18px;
+	left: 0;
+	right: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 100001;
+	pointer-events: none;
+}
+
+.pet-header .pet-text {
+	pointer-events: auto;
+	font-size: 1.6rem;
+	font-weight: 900;
+	color: #ff66b2;
+	text-transform: uppercase;
+	letter-spacing: 0.6px;
+	background: rgba(255,255,255,0.95);
+	padding: 0.4rem 0.9rem;
+	border-radius: 8px;
+	box-shadow: 0 8px 30px rgba(255,31,91,0.12);
+}
+
+/* shared heading style used for pet and character chooser headings */
+.pet-text {
+	font-size: 1.6rem;
+	font-weight: 900;
+	color: #ff66b2;
+	text-transform: uppercase;
+	letter-spacing: 0.6px;
+	background: rgba(255,255,255,0.95);
+	padding: 0.4rem 0.9rem;
+	border-radius: 8px;
+	box-shadow: 0 8px 30px rgba(255,31,91,0.12);
+}
+
+/* Character chooser layout */
+.character-chooser { display: none; }
+body.blank > #character-chooser {
+	display: flex !important;
+	gap: 1rem;
+	align-items: center;
+	justify-content: center;
+	position: fixed;
+	left: 50%;
+	transform: translateX(-50%);
+	bottom: 18%;
+	z-index: 9998;
+}
+
+.char-stage {
+	width: 360px;
+	height: 360px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(255,255,255,0.95);
+	border-radius: 12px;
+	padding: 0.5rem;
+	box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+	flex-direction: column;
+}
+
+.char-stage img {
+	max-width: 100%;
+	max-height: 84%;
+	border-radius: 10px;
+	object-fit: contain;
+}
+
+.char-caption { margin-top: 6px; font-weight: 700; color: #ff66b2; }
+
+.char-arrow {
+	background: #ff66b2;
+	color: #fff;
+	border: none;
+	width: 48px;
+	height: 48px;
+	border-radius: 10px;
+	font-size: 1.25rem;
+	cursor: pointer;
+	box-shadow: 0 8px 20px rgba(255,102,178,0.18);
+}
+
+.shuffle-button {
+	background: transparent;
+	border: none;
+	font-size: 1.4rem;
+	margin-left: 10px;
+	cursor: pointer;
+}
+
+.select-button {
+	background: #ff66b2;
+	color: #fff;
+	border: none;
+	padding: 0.5rem 0.9rem;
+	border-radius: 8px;
+	font-weight: 800;
+	cursor: pointer;
+	margin-left: 8px;
+	box-shadow: 0 8px 20px rgba(255,102,178,0.18);
+}
+
+.char-stage.selected {
+	outline: 4px solid rgba(255,102,178,0.18);
+	transform: translateY(-4px);
+}
+
+@media (max-width: 700px) {
+	body.blank > #character-chooser { bottom: 8%; flex-direction: column; }
+	.char-stage { width: 260px; height: 260px; }
+}
+
+@media (max-width: 700px) {
+	.image-row { flex-direction: column; }
+	.image-row img { max-width: 80%; width: auto; }
+}

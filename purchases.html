@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your Purchases</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body{margin:0;background:#fff7f9;font-family:system-ui,Segoe UI,Roboto,Arial}
+    .wrap{max-width:960px;margin:24px auto;padding:16px}
+    h2{color:#ff66b2;text-align:center}
+    .balance{font-weight:900;text-align:center;margin-bottom:12px}
+    .purchase{background:#fff;border-radius:8px;padding:12px;margin-bottom:8px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    .items{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .items img{width:80px;border-radius:6px}
+    .btn{padding:8px 12px;border-radius:8px;border:none;background:#ff66b2;color:#fff}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>Your Purchases</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <div class="balance">Current balance: $<span id="bal">0</span></div>
+      <div><button id="wear-latest" class="btn">Wear Your Accessories</button></div>
+    </div>
+    <div id="purchases-list"></div>
+    <div style="text-align:center;margin-top:12px"><button id="to-shop" class="btn">Back to Shop</button></div>
+  </div>
+<script>
+(function(){
+  const balEl = document.getElementById('bal');
+  const list = document.getElementById('purchases-list');
+  // load and sanitize purchases: remove invalid entries and items with undefined filenames
+  let purchases = [];
+  try{
+    const raw = JSON.parse(localStorage.getItem('purchases')||'[]');
+    if (Array.isArray(raw)){
+      purchases = raw.map(p=> {
+        if (!p || typeof p !== 'object') return null;
+        // ensure items is an array and filter invalid filenames
+        const items = Array.isArray(p.items) ? p.items.filter(it => it && it.filename && String(it.filename).trim() !== '' && String(it.filename) !== 'undefined') : [];
+        // ensure sensible total/time
+        const total = Number(p.total) || 0;
+        const time = Number(p.time) || 0;
+        // normalize char/pet/house values (treat 'undefined' as empty)
+        let char = p.char || '';
+        let pet = p.pet || '';
+        let house = p.house || '';
+        if (String(char) === 'undefined') char = '';
+        if (String(pet) === 'undefined') pet = '';
+        if (String(house) === 'undefined') house = '';
+        // drop purchases that have no useful data or are zero-total
+        if (total <= 0 && !items.length && !char && !pet && !house) return null;
+        return { time, total, items, char, pet, house };
+      }).filter(Boolean);
+      // persist cleaned purchases back to localStorage
+      localStorage.setItem('purchases', JSON.stringify(purchases));
+    }
+  }catch(e){ purchases = []; }
+  const earned = parseInt(localStorage.getItem('earned')||'0',10) || 0;
+  balEl.textContent = earned;
+
+  // only show purchases that include accessory items
+  const accessoryPurchases = purchases.filter(p => Array.isArray(p.items) && p.items.length > 0);
+  if (!accessoryPurchases.length){
+    list.innerHTML = '<div style="text-align:center;color:#666;padding:12px">No accessory purchases yet.</div>';
+  } else {
+    accessoryPurchases.forEach((p,i)=>{
+      const el = document.createElement('div'); el.className='purchase';
+      const d = new Date(p.time);
+      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:800">$${p.total} — ${d.toLocaleString()}</div>
+        <div>${p.char ? '<img src="'+p.char+'" style="width:48px;height:auto;border-radius:6px">' : ''} ${p.pet ? '<img src="'+p.pet+'" style="width:48px;height:auto;border-radius:6px;margin-left:6px">' : ''}</div>
+      </div>`;
+      const itemsWrap = document.createElement('div'); itemsWrap.className='items';
+      (p.items||[]).forEach(it=>{
+        const img = document.createElement('img'); img.src = it.filename || ''; img.alt = it.type || '';
+        itemsWrap.appendChild(img);
+      });
+      // wear button: store the purchase time and open outfit page which will look it up
+      const wearBtn = document.createElement('button'); wearBtn.className='btn'; wearBtn.textContent='Wear your accessories';
+      wearBtn.addEventListener('click', ()=>{
+        try{ localStorage.setItem('viewPurchaseTime', String(p.time)); }catch(e){}
+        window.location.href = 'outfit.html';
+      });
+      el.appendChild(itemsWrap);
+      el.appendChild(wearBtn);
+      list.appendChild(el);
+    });
+  }
+
+  document.getElementById('to-shop').addEventListener('click', ()=> window.location.href='accessories.html');
+  const wearLatest = document.getElementById('wear-latest');
+  if (wearLatest){
+    wearLatest.addEventListener('click', ()=>{
+      const purchasesArr = JSON.parse(localStorage.getItem('purchases')||'[]');
+      // find last purchase that has accessory items
+      for (let i = purchasesArr.length - 1; i >= 0; i--){
+        const p = purchasesArr[i];
+        if (p && Array.isArray(p.items) && p.items.length > 0){
+          try{ localStorage.setItem('viewPurchaseTime', String(p.time)); }catch(e){}
+          window.location.href = 'outfit.html';
+          return;
+        }
+      }
+      return alert('No accessory purchases to wear');
+    });
+  }
+})();
+</script>
+<script src="reload-redirect.js"></script>
+</body>
+</html>

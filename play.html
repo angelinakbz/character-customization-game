@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Play with Your Character</title>
+  <style>
+    body{margin:0;background:#a6e3ff;display:flex;flex-direction:column;align-items:center;font-family:system-ui,Segoe UI,Roboto,Arial}
+    .wrap{max-width:900px;width:100%;padding:12px}
+    canvas{background:linear-gradient(#9fe7ff,#6fd8ff);border-radius:8px;display:block;margin:12px auto}
+    .hud{display:flex;gap:12px;justify-content:center;align-items:center}
+    .btn{padding:8px 12px;border-radius:8px;border:none;background:#ff66b2;color:#fff}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2 style="text-align:center;color:#064e3b">Jump & Dodge — Play</h2>
+    <div class="hud"><button id="back" class="btn">Back</button><div id="score">Score: 0</div><div id="jumps">Jumps: 0/5</div></div>
+    <canvas id="game" width="800" height="300"></canvas>
+  </div>
+  <!-- modals -->
+  <div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:999">
+    <div id="modal-content" style="background:#fff;padding:20px;border-radius:10px;max-width:420px;width:90%;text-align:center">
+      <div id="modal-title" style="font-weight:800;margin-bottom:8px"></div>
+      <div id="modal-body" style="margin-bottom:12px"></div>
+      <div id="modal-actions" style="display:flex;gap:8px;justify-content:center"></div>
+    </div>
+  </div>
+<script>
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const char = params.get('char') || '';
+  const pet = params.get('pet') || '';
+
+  // fallback to persisted selections if params missing
+  let effectiveChar = char;
+  let effectivePet = pet;
+  try{ if (!effectiveChar) effectiveChar = localStorage.getItem('selectedCharacter') || ''; }catch(e){}
+  try{ if (!effectivePet) effectivePet = localStorage.getItem('selectedPet') || ''; }catch(e){}
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  let score = 0; document.getElementById('score').textContent = 'Score: ' + score;
+  const WIN_JUMPS = 5;
+  let jumpCount = 0; document.getElementById('jumps').textContent = `Jumps: ${jumpCount}/${WIN_JUMPS}`;
+  let gameEnded = false;
+
+  // load images
+  const charImg = new Image(); const petImg = new Image();
+  if (effectiveChar) charImg.src = effectiveChar;
+  if (effectivePet) petImg.src = effectivePet;
+
+  // player
+  const player = {x:80,y:H-60,w:48,h:64,vy:0,ground:H-60,jumping:false,canDouble:true};
+  const gravity = 0.8;
+
+  const obstacles = [];
+  let spawnTimer = 0;
+  // no flying birds (removed)
+
+  function spawnObstacle(){
+    const h = 24 + Math.random()*40;
+    obstacles.push({x:W+10,y:H-h,w:24+Math.random()*24,h:h, counted:false});
+  }
+
+  // birds removed
+
+  function update(){
+    // physics
+    if (gameEnded) return;
+    if (player.jumping){ player.vy += gravity; player.y += player.vy; if (player.y >= player.ground){ player.y = player.ground; player.jumping=false; player.vy=0; }}
+    // obstacles
+    for (let i=obstacles.length-1;i>=0;i--){
+      const ob = obstacles[i];
+      ob.x -= 6;
+      // if obstacle has passed the player and not yet counted, determine if player jumped over it
+      if (!ob.counted && (ob.x + ob.w) < player.x){
+        // player bottom y
+        const playerBottom = player.y + player.h;
+        if (playerBottom <= ob.y + 2){
+          jumpCount++; document.getElementById('jumps').textContent = `Jumps: ${jumpCount}/${WIN_JUMPS}`;
+        }
+        ob.counted = true;
+      }
+      if (ob.x + ob.w < 0){ obstacles.splice(i,1); score++; document.getElementById('score').textContent = 'Score: ' + score; }
+    }
+    spawnTimer -= 16; if (spawnTimer <= 0){ spawnTimer = 800 + Math.random()*900; spawnObstacle(); }
+    // collision
+    for (let ob of obstacles){ if (rectsIntersect(player, ob)){ showLose(); return; }}
+    // birds removed
+    // win check
+    if (jumpCount >= WIN_JUMPS){ showWin(); return; }
+  }
+
+  function rectsIntersect(a,b){ return !(a.x + a.w < b.x || a.x > b.x + b.w || a.y + a.h < b.y || a.y > b.y + b.h); }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // ground
+    ctx.fillStyle = '#3b82f6'; ctx.fillRect(0,H-20,W,20);
+    // player (draw char image if available)
+    if (charImg.complete && charImg.src){ ctx.drawImage(charImg, player.x, player.y - (player.h - player.h), player.w, player.h); }
+    else { ctx.fillStyle='#ffcc00'; ctx.fillRect(player.x, player.y, player.w, player.h); }
+    // pet near player
+    if (petImg.complete && petImg.src){ ctx.drawImage(petImg, player.x - 40, player.y + 12, 36, 36); }
+    // obstacles
+    ctx.fillStyle='#6b7280'; for (let ob of obstacles){ ctx.fillRect(ob.x, ob.y, ob.w, ob.h); }
+    // no birds to draw
+  }
+
+  let last = performance.now();
+  function loop(t){ const dt = t - last; last = t; update(dt); draw(); requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+
+  function jump(){
+    if (!player.jumping){
+      player.jumping=true; player.vy = -12; player.canDouble = true;
+    } else if (player.jumping && player.canDouble){
+      // second press while airborne -> higher jump (double-jump)
+      player.vy = -16; // stronger upward velocity
+      player.canDouble = false;
+    }
+  }
+  window.addEventListener('keydown', (e)=>{ if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); jump(); } });
+  canvas.addEventListener('click', ()=> jump());
+
+  // show modals
+  const modal = document.getElementById('modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalBody = document.getElementById('modal-body');
+  const modalActions = document.getElementById('modal-actions');
+
+  function hideModal(){ modal.style.display = 'none'; modalTitle.textContent=''; modalBody.textContent=''; modalActions.innerHTML=''; }
+
+  function showWin(){
+    gameEnded = true;
+    modal.style.display = 'flex';
+    modalTitle.textContent = 'You won!';
+    modalBody.textContent = 'Great job — you survived and scored ' + score + '!';
+    modalActions.innerHTML = '';
+    const giftBtn = document.createElement('button'); giftBtn.className='btn'; giftBtn.textContent = 'Now here is a gift for you';
+    giftBtn.addEventListener('click', ()=>{ hideModal(); window.location.href = 'gift.html'; });
+    const toChar = document.createElement('button'); toChar.className='btn'; toChar.textContent='Back to Character'; toChar.addEventListener('click', ()=>{ hideModal(); window.location.href='character.html'; });
+    modalActions.appendChild(giftBtn); modalActions.appendChild(toChar);
+  }
+
+  function showLose(){
+    gameEnded = true;
+    modal.style.display = 'flex';
+    modalTitle.textContent = 'Game over';
+    modalBody.textContent = 'You scored ' + score + '. Try again?';
+    modalActions.innerHTML = '';
+    const restartBtn = document.createElement('button'); restartBtn.className='btn'; restartBtn.textContent='Restart'; restartBtn.addEventListener('click', ()=>{ hideModal(); restartGame(); });
+    modalActions.appendChild(restartBtn);
+  }
+
+  function restartGame(){
+    // reset state
+    score = 0; document.getElementById('score').textContent = 'Score: ' + score;
+    jumpCount = 0; document.getElementById('jumps').textContent = `Jumps: ${jumpCount}/${WIN_JUMPS}`;
+    obstacles.length = 0; spawnTimer = 0; gameEnded = false;
+    player.y = player.ground; player.jumping = false; player.vy = 0; player.canDouble = true;
+    last = performance.now();
+  }
+
+  document.getElementById('back').addEventListener('click', ()=> window.location.href='character.html');
+})();
+</script>
+<script src="reload-redirect.js"></script>
+</body>
+</html>

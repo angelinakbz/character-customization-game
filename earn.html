@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Earn Money - Whack-a-Mole</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body{margin:0;background:#ffd6e8;font-family:system-ui,Segoe UI,Roboto,Arial}
+    .wrap{max-width:960px;margin:12px auto;padding:12px}
+    #game-canvas{background:#87ceeb;border:4px solid #fff;display:block;margin:8px auto}
+    .hud{display:flex;gap:12px;align-items:center;justify-content:center;margin-top:8px}
+    .btn{padding:8px 12px;border-radius:8px;border:none;background:#ff66b2;color:#fff}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2 style="text-align:center;color:#ff66b2">Whack-a-Mole - Earn Money</h2>
+    <div class="hud">
+      <div id="target-desc">Target: --</div>
+      <div id="score">Hits: 0</div>
+      <div id="timer">Time: 0</div>
+      <button id="back" class="btn" style="background:#fff;color:#ff66b2;border:2px solid #ff66b2">Cancel</button>
+    </div>
+    <canvas id="game-canvas" width="800" height="400"></canvas>
+    <div style="text-align:center;margin-top:8px;color:#333">Click the moles to whack them.</div>
+  </div>
+
+<script>
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const cost = parseInt(params.get('cost')||'0',10);
+  // Single rule: 5 hits in 20s => $100
+  const target = {cost:100, goals:5, time:20};
+  const targetDesc = document.getElementById('target-desc');
+  targetDesc.textContent = `Target: ${target.goals} hits in ${target.time}s for $${target.cost}`;
+
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Whack-a-Mole settings
+  const cols = 4, rows = 3;
+  const padding = 40; // around edges
+  const gridW = W - padding*2, gridH = H - padding*2;
+  const cellW = gridW / cols, cellH = gridH / rows;
+  const moleRadius = Math.min(cellW, cellH)/4;
+
+  let goals = 0;
+  let timeLeft = target.time;
+  const scoreEl = document.getElementById('score');
+  const timerEl = document.getElementById('timer');
+  scoreEl.textContent = `Hits: ${goals}`;
+  timerEl.textContent = `Time: ${timeLeft}`;
+
+  let active = null; // {r,c,expires}
+  let spawnTimer = null;
+  let running = true;
+
+  function spawnMole(){
+    const r = Math.floor(Math.random()*rows);
+    const c = Math.floor(Math.random()*cols);
+    const now = performance.now();
+    const visibleFor = 700 + Math.random()*600; // 700-1300ms
+    active = {r,c,expires: now + visibleFor};
+    // schedule next spawn
+    const nextIn = 400 + Math.random()*800;
+    spawnTimer = setTimeout(spawnMole, nextIn);
+  }
+
+  function hideMole(){ active = null; }
+
+  canvas.addEventListener('click', (e)=>{
+    if (!running) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    if (!active) return;
+    const cx = padding + active.c*cellW + cellW/2;
+    const cy = padding + active.r*cellH + cellH/2;
+    const dx = mx - cx, dy = my - cy;
+    if (Math.hypot(dx,dy) <= moleRadius){
+      goals++; scoreEl.textContent = `Hits: ${goals}`;
+      active = null; // mole whacked
+      if (goals >= target.goals){ finish(true); }
+    }
+  });
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // background
+    ctx.fillStyle = '#87ceeb'; ctx.fillRect(0,0,W,H);
+    // grid holes
+    for (let r=0;r<rows;r++){
+      for (let c=0;c<cols;c++){
+        const x = padding + c*cellW + cellW/2;
+        const y = padding + r*cellH + cellH/2;
+        ctx.fillStyle = '#6b4f4f';
+        ctx.beginPath(); ctx.ellipse(x,y,moleRadius*1.4,moleRadius*0.7,0,0,Math.PI*2); ctx.fill(); ctx.closePath();
+      }
+    }
+    // draw active mole
+    if (active){
+      const x = padding + active.c*cellW + cellW/2;
+      const y = padding + active.r*cellH + cellH/2 - moleRadius*0.2;
+      ctx.beginPath(); ctx.fillStyle='#ffcc00'; ctx.arc(x,y,moleRadius,0,Math.PI*2); ctx.fill(); ctx.closePath();
+      ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(x-moleRadius*0.25,y-moleRadius*0.1,moleRadius*0.12,0,Math.PI*2); ctx.fill(); ctx.closePath();
+      ctx.beginPath(); ctx.arc(x+moleRadius*0.25,y-moleRadius*0.1,moleRadius*0.12,0,Math.PI*2); ctx.fill(); ctx.closePath();
+    }
+  }
+
+  let last = performance.now();
+  function loop(t){
+    const now = t || performance.now();
+    // expire mole if needed
+    if (active && now >= active.expires){ active = null; }
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // start game
+  spawnMole();
+  requestAnimationFrame(loop);
+
+  const timerId = setInterval(()=>{
+    if (!running) return;
+    timeLeft--; timerEl.textContent = `Time: ${timeLeft}`;
+    if (timeLeft <= 0){ finish(false); }
+  },1000);
+
+  function finish(success){
+    running = false;
+    clearTimeout(spawnTimer);
+    clearInterval(timerId);
+    if (success){
+      // save earned money to localStorage so user can purchase later
+      const prev = parseInt(localStorage.getItem('earned')||'0',10) || 0;
+      const nowAmt = prev + target.cost;
+      localStorage.setItem('earned', String(nowAmt));
+      alert('You succeeded! You earned $' + target.cost + '. Next: play the memory game.');
+      // go to memory card game page
+      window.location.href = 'memory.html';
+    } else {
+      alert('Time up — not enough hits. Try again.');
+      window.location.href = 'accessories.html?failed=1&cost=' + encodeURIComponent(cost);
+    }
+  }
+
+  document.getElementById('back').addEventListener('click', ()=>{ window.location.href='accessories.html'; });
+
+})();
+</script>
+<script src="reload-redirect.js"></script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Jump Game</title>
+  <style>
+    :root { --bg: #ffd6e8; --accent: #ff66b2; }
+    body { margin:0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; background: var(--bg); }
+    .game-wrap { min-height:100vh; display:flex; flex-direction:column; align-items:center; gap:12px; }
+    .header { width:100%; padding:18px 12px; display:flex; align-items:center; justify-content:center; position:relative; }
+    .header .title { font-weight:900; color:var(--accent); background:#fff; padding:8px 14px; border-radius:10px; box-shadow:0 8px 30px rgba(255,31,91,0.12); }
+    .back-button { position:absolute; left:18px; top:12px; }
+    .game-instruction { text-align:center; color:var(--accent); font-weight:800; margin-top:6px; }
+    .game-area { width:100%; max-width:900px; height:360px; background:linear-gradient(#fff,#fff0); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.08); display:flex; align-items:flex-end; justify-content:flex-start; position:relative; overflow:hidden; }
+    canvas { display:block; width:100%; height:100%; }
+    .controls { display:flex; gap:8px; margin-top:8px; }
+    .btn { background:#ff66b2; color:white; border:none; padding:8px 12px; border-radius:8px; font-weight:800; cursor:pointer; }
+    .btn.ghost { background:#fff; color:var(--accent); border:2px solid var(--accent); }
+    .overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.35); z-index:20; }
+    .overlay.hidden { display:none; }
+    .overlay .panel { background:#fff; padding:20px 24px; border-radius:10px; text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="game-wrap">
+    <div class="header">
+      <button id="back-home" class="back-button btn ghost">Back</button>
+      <div class="title">Jump Game</div>
+      <img id="game-pet-thumb" src="" alt="selected pet" style="position:absolute;right:18px;top:12px;width:64px;height:auto;border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.08);display:none;">
+    </div>
+    <div class="game-instruction">Jump over 10 blocks to collect your pet</div>
+
+    <div class="game-area" id="game-area">
+      <canvas id="game-canvas" width="900" height="360"></canvas>
+
+      <div id="start-overlay" class="overlay">
+        <div class="panel">
+          <div style="font-weight:900;color:var(--accent);font-size:1.2rem;margin-bottom:8px">Ready?</div>
+          <div style="margin-bottom:8px;font-weight:700;color:#ff66b2">Jump over 10 blocks to collect your pet</div>
+          <button id="start-btn" class="btn">Start</button>
+        </div>
+      </div>
+
+      <div id="lose-overlay" class="overlay hidden">
+        <div class="panel">
+          <div style="font-weight:900;color:#ff3b3b;font-size:1.2rem;margin-bottom:8px">You lost!</div>
+          <div style="margin-bottom:8px">Obstacles cleared: <span id="lose-count">0</span></div>
+          <button id="restart-btn" class="btn">Restart</button>
+        </div>
+      </div>
+
+      <div id="win-overlay" class="overlay hidden">
+        <div class="panel">
+          <div style="font-weight:900;color:var(--accent);font-size:1.2rem;margin-bottom:8px">You win!</div>
+          <div style="margin-bottom:8px">You cleared <span id="win-count">0</span> obstacles</div>
+          <img id="win-pet-thumb" src="" alt="won pet" style="width:140px;display:block;margin:8px auto;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.08);">
+          <button id="restart-win-btn" class="btn">Collect your pet</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="font-weight:800;color:var(--accent);">Obstacles cleared: <span id="score">0</span></div>
+      <div class="controls">
+        <button id="hint-space" class="btn ghost">Press Space to Jump</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  // optional: char and pet params
+  const selectedChar = params.get('char') || '';
+  const selectedPet = params.get('pet') || '';
+
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d');
+  const cw = canvas.width, ch = canvas.height;
+
+  let running = false;
+  let gameOver = false;
+  let won = false;
+  let score = 0;
+  // double-tap jump state
+  let lastSpaceTime = 0;
+  const doubleWindow = 300; // ms allowed between taps for higher jump
+  let doubleUsed = false;
+
+  const groundY = ch - 60;
+
+  const player = { x:80, y:groundY, w:40, h:50, vy:0, onGround:true };
+  const gravity = 0.9;
+  const jumpPower = -14;
+
+  let obstacles = [];
+  let spawnTimer = 0;
+  let spawnInterval = 1400; // ms
+  let lastTime = 0;
+
+  const scoreEl = document.getElementById('score');
+  const startOverlay = document.getElementById('start-overlay');
+  const loseOverlay = document.getElementById('lose-overlay');
+  const winOverlay = document.getElementById('win-overlay');
+  const startBtn = document.getElementById('start-btn');
+  const restartBtn = document.getElementById('restart-btn');
+  const restartWinBtn = document.getElementById('restart-win-btn');
+  const loseCount = document.getElementById('lose-count');
+  const winCount = document.getElementById('win-count');
+  const backHome = document.getElementById('back-home');
+
+  function resetGame(){
+    running = false; gameOver=false; won=false; score=0; obstacles = []; spawnTimer=0; lastTime=0; player.y = groundY; player.vy=0; player.onGround=true; updateScore(); hideOverlays(); startOverlay.classList.remove('hidden');
+    // reset double-jump state
+    lastSpaceTime = 0; doubleUsed = false;
+  }
+
+  function hideOverlays(){ loseOverlay.classList.add('hidden'); winOverlay.classList.add('hidden'); startOverlay.classList.add('hidden'); }
+
+  function startGame(){ running=true; gameOver=false; score=0; obstacles=[]; spawnTimer=0; lastTime = performance.now(); startOverlay.classList.add('hidden'); }
+
+  function gameLoop(t){
+    if (!running) return;
+    const dt = t - lastTime; lastTime = t;
+
+    // physics
+    player.vy += gravity;
+    player.y += player.vy;
+    if (player.y >= groundY) { player.y = groundY; player.vy = 0; player.onGround = true; }
+
+    // spawn
+    spawnTimer += dt;
+    if (spawnTimer > spawnInterval) {
+      spawnTimer = 0;
+      const h = 30 + Math.random()*40; const w = 22 + Math.random()*30; obstacles.push({ x: cw + 20, y: groundY + (player.h - h), w: w, h: h, passed: false });
+    }
+
+    // move obstacles
+    for (let i=obstacles.length-1;i>=0;i--){
+      const ob = obstacles[i];
+      ob.x -= (200 * dt/1000); // 200 px/s
+      // check pass
+      if (!ob.passed && ob.x + ob.w < player.x) { ob.passed = true; score++; updateScore(); if (score >= 10) { win(); return; } }
+      // collision
+      if (rectsOverlap(player.x, player.y - player.h, player.w, player.h, ob.x, ob.y, ob.w, ob.h)) {
+        lose(); return;
+      }
+      if (ob.x + ob.w < -50) obstacles.splice(i,1);
+    }
+
+    // render
+    render();
+    requestAnimationFrame(gameLoop);
+  }
+
+  function rectsOverlap(px, py, pw, ph, ox, oy, ow, oh){
+    return !(px+pw < ox || px > ox+ow || py+ph < oy || py > oy+oh);
+  }
+
+  function render(){
+    // clear
+    ctx.clearRect(0,0,cw,ch);
+    // ground
+    ctx.fillStyle = '#ffe6f2'; ctx.fillRect(0, groundY + player.h, cw, ch - groundY - player.h);
+    // player
+    ctx.fillStyle = '#ff66b2'; ctx.fillRect(player.x, player.y - player.h, player.w, player.h);
+    // obstacles
+    ctx.fillStyle = '#ff3b3b';
+    for (const ob of obstacles) { ctx.fillRect(ob.x, ob.y, ob.w, ob.h); }
+  }
+
+  function updateScore(){ scoreEl.textContent = score; }
+
+  function jump(){
+    if (!running || gameOver) return;
+    const now = Date.now();
+    if (player.onGround) {
+      // initial jump
+      player.vy = jumpPower;
+      player.onGround = false;
+      // enable potential double-tap boost
+      lastSpaceTime = now;
+      doubleUsed = false;
+    } else {
+      // in-air second press: if within window and not yet used, give extra boost
+      if (!doubleUsed && (now - lastSpaceTime) <= doubleWindow) {
+        const extraBoost = -8; // additional upward impulse
+        player.vy += extraBoost;
+        doubleUsed = true;
+      }
+    }
+  }
+
+  function lose(){ running=false; gameOver=true; loseOverlay.classList.remove('hidden'); loseCount.textContent = score; }
+  function win(){ running=false; won=true; winOverlay.classList.remove('hidden'); winCount.textContent = score; }
+
+  // controls
+  document.addEventListener('keydown', (e)=>{ if (e.code === 'Space'){ e.preventDefault(); jump(); } });
+  startBtn.addEventListener('click', ()=>{ startGame(); requestAnimationFrame(gameLoop); });
+  restartBtn.addEventListener('click', ()=>{ resetGame(); });
+  // Next button: go to accessories page with selected char and pet
+  restartWinBtn.addEventListener('click', ()=>{
+    const qp = new URLSearchParams();
+    if (selectedChar) qp.set('char', selectedChar);
+    if (selectedPet) qp.set('pet', selectedPet);
+    const url = 'accessories.html' + (qp.toString() ? ('?' + qp.toString()) : '');
+    window.location.href = url;
+  });
+  backHome.addEventListener('click', ()=>{
+    const qp = new URLSearchParams();
+    if (selectedChar) qp.set('char', selectedChar);
+    if (selectedPet) qp.set('pet', selectedPet);
+    const url = 'pet.html' + (qp.toString() ? '?' + qp.toString() : '');
+    window.location.href = url;
+  });
+
+  // initialize
+  // show selected pet thumbnail in header if provided
+  const gamePetThumb = document.getElementById('game-pet-thumb');
+  const winPetThumb = document.getElementById('win-pet-thumb');
+  if (selectedPet && gamePetThumb) {
+    gamePetThumb.src = encodeURIComponent(selectedPet);
+    gamePetThumb.style.display = 'block';
+  }
+
+  if (winPetThumb) {
+    // set now; will be updated again on win
+    if (selectedPet) winPetThumb.src = encodeURIComponent(selectedPet);
+  }
+
+  resetGame();
+})();
+</script>
+</body>
+</html>

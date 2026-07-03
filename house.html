@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your House</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f3f4f6}
+    .wrap{max-width:900px;margin:24px auto;padding:16px}
+    .row{display:flex;gap:12px;align-items:flex-start}
+    .panel{background:#fff;padding:12px;border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.06);flex:1;text-align:center}
+    .panel img{max-width:100%;height:360px;object-fit:cover;border-radius:6px}
+    .interior-wrap{position:relative}
+    /* make interior larger and responsive */
+    #interior{display:block;height:min(80vh,720px);width:100%;object-fit:cover;border-radius:6px}
+    /* smaller overlays so character/pet don't dominate the scene */
+    .overlay-char,.overlay-pet{position:absolute;bottom:6%;transform:translateX(-50%);pointer-events:none;z-index:12}
+    .overlay-char{left:54%;width:10%}
+    .overlay-pet{left:42%;width:6%}
+    .btn{padding:8px 12px;border-radius:8px;border:none;background:#3b82f6;color:#fff;cursor:pointer;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>Your House</h2>
+    <div id="message">Loading...</div>
+    <div class="row" id="content" style="display:none">
+      <div class="panel">
+        <h3>Exterior</h3>
+        <img id="exterior" src="" alt="house exterior">
+      </div>
+      <div class="panel">
+        <h3>Interior</h3>
+        <div class="interior-wrap">
+          <img id="interior" src="" alt="house interior" style="display:none">
+          <img id="char-overlay" class="overlay-char" src="" alt="character" style="display:none">
+          <img id="pet-overlay" class="overlay-pet" src="" alt="pet" style="display:none">
+        </div>
+        <div id="no-interior" style="color:#666;margin-top:8px;display:none">No interior available</div>
+      </div>
+    </div>
+    <p><a href="index.html">Return home</a></p>
+  </div>
+
+  <script>
+  (function(){
+    const mapping = {
+      'download - 2026-06-22T182024.007.jpeg': 'download - 2026-06-22T181902.853.jpeg',
+      'download - 2026-06-22T181946.971.jpeg': 'download - 2026-06-22T181937.376.jpeg',
+      'download - 2026-06-22T181851.988.jpeg': 'download - 2026-06-22T181953.690.jpeg',
+      'home home.jpeg': 'download - 2026-06-22T182054.393.jpeg'
+    };
+    const sel = localStorage.getItem('selectedHouse');
+    const msg = document.getElementById('message');
+    const content = document.getElementById('content');
+    const exterior = document.getElementById('exterior');
+    const interior = document.getElementById('interior');
+    const charOverlay = document.getElementById('char-overlay');
+    const petOverlay = document.getElementById('pet-overlay');
+    const noInt = document.getElementById('no-interior');
+    if (!sel){ msg.textContent = 'You have not selected a house yet.'; return; }
+    msg.style.display='none';
+    content.style.display='flex';
+    exterior.src = sel;
+    // if user just selected a house, hide the exterior panel so they only see the interior
+    try{
+      const just = localStorage.getItem('justSelectedHouse');
+      if (just === '1'){
+        // hide the first panel (exterior)
+        const exteriorPanel = content.querySelector('.panel');
+        if (exteriorPanel) exteriorPanel.style.display = 'none';
+        try{ localStorage.removeItem('justSelectedHouse'); }catch(e){}
+      }
+    }catch(e){}
+    // show interior automatically when available
+    const intSrc = mapping[sel];
+    if (intSrc){ interior.src = intSrc; interior.style.display='block'; noInt.style.display='none'; }
+    else { noInt.style.display='block'; }
+
+    // helper to trim near-white background from images via canvas
+    function processImageToTrimWhite(src, cb){
+      const img = new Image();
+      // only set crossOrigin for remote images to avoid canvas taint for local files
+      if (/^(https?:)?\/\//.test(src)) img.crossOrigin = 'anonymous';
+      img.onload = function(){
+        const w = img.naturalWidth; const h = img.naturalHeight;
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const ctx = c.getContext('2d'); ctx.drawImage(img,0,0);
+        try{
+          const id = ctx.getImageData(0,0,w,h);
+          const d = id.data;
+          for (let i=0;i<d.length;i+=4){
+            const r=d[i], g=d[i+1], b=d[i+2];
+            // treat very light pixels as background (loosen threshold)
+            if (r > 230 && g > 230 && b > 230){ d[i+3] = 0; }
+          }
+          ctx.putImageData(id,0,0);
+          cb(c.toDataURL());
+        }catch(e){
+          // if CORS or other error, fall back to original src
+          cb(src);
+        }
+      };
+      img.onerror = function(){ cb(src); };
+      img.src = src;
+    }
+
+    // overlay selected character and pet if present (processed to remove white background)
+    try{
+      const charSrc = localStorage.getItem('selectedCharacter') || '';
+      const petSrc = localStorage.getItem('selectedPet') || '';
+      if (charSrc){ processImageToTrimWhite(charSrc, function(data){ charOverlay.src = data; charOverlay.style.display='block'; }); }
+      if (petSrc){ processImageToTrimWhite(petSrc, function(data){ petOverlay.src = data; petOverlay.style.display='block'; }); }
+    }catch(e){}
+  })();
+  </script>
+</body>
+</html>

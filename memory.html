@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Memory Game</title>
+  <style>
+    body{margin:0;background:#f0f8ff;font-family:system-ui,Segoe UI,Roboto,Arial;display:flex;flex-direction:column;align-items:center}
+    .wrap{max-width:900px;width:100%;padding:16px}
+    h2{color:#2b5797;text-align:center}
+    .balance{margin:8px 0;text-align:center}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:640px;margin:12px auto}
+    .card{background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);height:90px;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer}
+    .card.flipped{background:#ffd;}
+    .hud{display:flex;gap:12px;align-items:center;justify-content:center;margin-top:8px}
+    .btn{padding:8px 12px;border-radius:8px;border:none;background:#2b5797;color:#fff}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>Memory Match — Finish to Continue</h2>
+    <div class="balance">Current saved earnings: $<span id="bal">0</span></div>
+    <div class="grid" id="grid"></div>
+    <div class="hud"><button id="back" class="btn">Back to Shop</button></div>
+  </div>
+<script>
+(function(){
+  const pairs = ["🍎","🍌","🍇","🍒","🍋","🥝","🍍","🍑"];
+  // use first 8 pairs -> 16 cards; we will show 8 pairs but grid is 4x4
+  let cards = pairs.concat(pairs).slice(0,16);
+  // shuffle
+  for (let i=cards.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [cards[i],cards[j]]=[cards[j],cards[i]]; }
+
+  const grid = document.getElementById('grid');
+  const balEl = document.getElementById('bal');
+  let balance = parseInt(localStorage.getItem('earned')||'0',10) || 0;
+  balEl.textContent = balance;
+
+  let state = {flipped:[],matched:0,locked:false};
+
+  function render(){
+    grid.innerHTML = '';
+    cards.forEach((c,i)=>{
+      const div = document.createElement('div'); div.className='card'; div.dataset.idx=i; div.textContent='';
+      if (state.flipped.includes(i) || div.classList.contains('matched')){
+        div.classList.add('flipped'); div.textContent = cards[i];
+      }
+      div.addEventListener('click', onClick);
+      grid.appendChild(div);
+    });
+  }
+
+  function onClick(e){
+    const idx = Number(e.currentTarget.dataset.idx);
+    if (state.locked) return; if (state.flipped.includes(idx)) return;
+    state.flipped.push(idx); e.currentTarget.classList.add('flipped'); e.currentTarget.textContent = cards[idx];
+    if (state.flipped.length===2){
+      const [a,b] = state.flipped; if (cards[a]===cards[b]){ // match
+        state.matched+=1; // one pair
+        // mark matched visually
+        setTimeout(()=>{
+          // remove those cards from play
+          const elems = Array.from(document.querySelectorAll('.card'));
+          elems.forEach(el=>{ const ii=Number(el.dataset.idx); if (ii===a||ii===b){ el.style.visibility='hidden'; }});
+          state.flipped=[];
+          if (state.matched>=8){ onWin(); }
+        },300);
+      } else {
+        state.locked=true;
+        setTimeout(()=>{
+          const elems = Array.from(document.querySelectorAll('.card'));
+          elems.forEach(el=>{ const ii=Number(el.dataset.idx); if (state.flipped.includes(ii)){ el.classList.remove('flipped'); el.textContent=''; }});
+          state.flipped=[]; state.locked=false;
+        },700);
+      }
+    }
+  }
+
+  function onWin(){
+    alert('Memory game complete! You can now spend your saved earnings.');
+    // redirect to accessories/shop
+    window.location.href = 'accessories.html';
+  }
+
+  document.getElementById('back').addEventListener('click', ()=>{ window.location.href='accessories.html'; });
+
+  // build grid
+  render();
+})();
+</script>
+<script src="reload-redirect.js"></script>
+</body>
+</html>

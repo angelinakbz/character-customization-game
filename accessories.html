@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Choose Accessories</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { margin:0; background:#ffd6e8; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; }
+    .wrap { max-width:960px; margin:24px auto; padding:12px; }
+    .header { display:flex; align-items:center; justify-content:center; position:relative; }
+    .title { font-weight:900; color:#ff66b2; background:#fff; padding:8px 14px; border-radius:10px; }
+    .thumbs { display:flex; gap:12px; margin:18px 0; align-items:center; }
+    .thumbs img { width:120px; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,0.08); background:#fff; padding:6px; }
+    .accessories { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; }
+    .accessory { background:#fff; border-radius:10px; padding:8px; text-align:center; box-shadow:0 8px 20px rgba(0,0,0,0.06); }
+    .back { position:absolute; left:12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <button id="back-pet" class="back-button">Back</button>
+      <div class="title">Choose Accessories</div>
+    </div>
+    <div style="text-align:center;margin-top:8px;margin-bottom:6px">
+      <div id="current-balance" style="font-weight:900;color:#333">Current balance: $0</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:8px">
+      <div id="total-box" style="font-weight:900;color:#333">Total: $0</div>
+      <button id="play-to-earn-btn" class="btn" style="background:#06b6d4;color:#fff;border:none;padding:8px 12px;border-radius:8px;">play to earn money</button>
+      <button id="view-purchases-btn" class="btn" style="background:#f59e0b;color:#fff;border:none;padding:8px 12px;border-radius:8px;">View Purchases</button>
+      <button id="confirm-purchase" class="btn" style="background:#ff66b2;color:#fff;border:none;padding:8px 12px;border-radius:8px;">Confirm Purchase</button>
+    </div>
+
+    <div class="thumbs">
+      <div>
+        <div style="font-weight:800;color:#ff66b2;margin-bottom:6px">Selected Character</div>
+        <div class="thumb-wrapper" style="position:relative;display:inline-block">
+          <img id="char-thumb" src="" alt="character" style="display:none">
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:800;color:#ff66b2;margin-bottom:6px">Selected Pet</div>
+        <div class="thumb-wrapper" style="position:relative;display:inline-block">
+          <img id="pet-thumb" src="" alt="pet" style="display:none">
+          <div class="accessory-slot" style="display:inline-block;vertical-align:top;margin-left:12px;min-width:96px;min-height:80px;
+              background:transparent;border-radius:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin:12px 0;font-weight:800;color:#ff66b2">Pick accessories</div>
+    <div style="margin-bottom:12px;color:#333;font-size:14px">click on accessory type to select one</div>
+    <div class="accessories" id="accessories-grid">
+      <!-- updated accessory options -->
+        <div id="accessory-glasses" class="accessory" data-name="Glasses">Glasses
+          <div style="font-weight:800;color:#333;margin-top:6px">$10</div>
+        </div>
+        <div id="accessory-purse" class="accessory" data-name="Purse">Purse
+          <div style="font-weight:800;color:#333;margin-top:6px">$100</div>
+        </div>
+      <div id="accessory-hat" class="accessory" data-name="Hat">Hat
+          <div style="font-weight:800;color:#333;margin-top:6px">$20</div>
+      </div>
+      <div id="accessory-jewellery" class="accessory" data-name="Jewellery">Jewellery
+          <div style="font-weight:800;color:#333;margin-top:6px">$60</div>
+      </div>
+    </div>
+
+    <!-- accessory modal -->
+    <div id="accessory-modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:9999">
+      <div style="background:#fff;padding:16px;border-radius:10px;max-width:720px;width:90%;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div id="accessory-modal-title" style="font-weight:900;color:#ff66b2">Choose Accessory</div>
+          <button id="accessory-modal-close" class="back-button">Close</button>
+        </div>
+        <div id="accessory-options" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <!-- options populated dynamically -->
+        </div>
+        <div style="margin-top:12px;text-align:right;display:flex;gap:8px;justify-content:flex-end;">
+          <button id="accessory-cancel" class="btn ghost">Cancel</button>
+          <button id="accessory-apply" class="btn">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- centered accessory display (shows applied accessories in middle of screen) -->
+  <div id="accessory-center" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:8px;pointer-events:auto;z-index:9998"></div>
+
+<script>
+  (function(){
+  const params = new URLSearchParams(window.location.search);
+  const selectedChar = params.get('char') || '';
+  const selectedPet = params.get('pet') || '';
+  const charThumb = document.getElementById('char-thumb');
+  const petThumb = document.getElementById('pet-thumb');
+
+  // URLSearchParams already returns decoded values; set src directly.
+  // If no `char` param, fall back to a persisted `selectedCharacter` in localStorage.
+  let effectiveChar = selectedChar;
+  if (!effectiveChar){ try{ effectiveChar = localStorage.getItem('selectedCharacter') || ''; }catch(e){} }
+  function trySetCharThumb(src){
+    if (!charThumb) return;
+    // show debug filename
+    const dbg = document.getElementById('char-debug'); if (dbg) dbg.textContent = src;
+    charThumb.style.display = 'block';
+    charThumb.onerror = function(){
+      // try alternative transforms
+      try{ const alt = decodeURIComponent(src); if (alt !== src){ charThumb.onerror=null; charThumb.src = alt; return; } }catch(e){}
+      try{ const alt2 = decodeURI(src); if (alt2 !== src){ charThumb.onerror=null; charThumb.src = alt2; return; } }catch(e){}
+      // last resort: replace %20 with space
+      try{ const alt3 = src.replace(/%20/g,' '); if (alt3 !== src){ charThumb.onerror=null; charThumb.src = alt3; return; } }catch(e){}
+      // still failing: hide and mark
+      charThumb.style.display = 'none'; if (dbg) dbg.textContent = 'image not found: ' + src;
+    };
+    charThumb.src = src;
+  }
+  if (effectiveChar){ trySetCharThumb(effectiveChar); }
+  // show debug area for filename or error
+  const thumbWrap = document.querySelector('.thumb-wrapper');
+  if (thumbWrap){
+    let dbg = document.getElementById('char-debug');
+    if (!dbg){ dbg = document.createElement('div'); dbg.id = 'char-debug'; dbg.style.fontSize='12px'; dbg.style.color='#555'; dbg.style.marginTop='6px'; thumbWrap.appendChild(dbg); }
+  }
+  // pet param remains optional
+  if (selectedPet && petThumb) { petThumb.src = selectedPet; petThumb.style.display = 'block'; }
+
+  const back = document.getElementById('back-pet');
+  if (back) back.addEventListener('click', ()=>{
+    const qp = new URLSearchParams();
+    if (selectedChar) qp.set('char', selectedChar);
+    if (selectedPet) qp.set('pet', selectedPet);
+    window.location.href = 'pet.html' + (qp.toString() ? ('?' + qp.toString()) : '');
+  });
+  // show current balance
+  const balanceEl = document.getElementById('current-balance');
+  function updateBalance(){
+    try{ const earned = parseInt(localStorage.getItem('earned')||'0',10) || 0; if (balanceEl) balanceEl.textContent = 'Current balance: $' + earned; }catch(e){ if (balanceEl) balanceEl.textContent = 'Current balance: $0'; }
+  }
+  updateBalance();
+  // listen for storage events (in case earned updates in another tab)
+  window.addEventListener('storage', (e)=>{ if (e.key === 'earned') updateBalance(); });
+  
+  // Accessory selection: glasses options
+  const glassesBtn = document.getElementById('accessory-glasses');
+    const purseBtn = document.getElementById('accessory-purse');
+  const modal = document.getElementById('accessory-modal');
+    const modalTitle = document.getElementById('accessory-modal-title');
+  const optionsContainer = document.getElementById('accessory-options');
+  const modalClose = document.getElementById('accessory-modal-close');
+  const applyBtn = document.getElementById('accessory-apply');
+  let selectedAccessory = null;
+  let selectedAccessoryType = null; // 'glasses' | 'purse' | ...
+  const accessoryPrices = {
+    glasses: 10,
+    purse: 100,
+    hat: 20,
+    jewellery: 60
+  };
+
+  const glassesOptions = [
+    'Очки пиксель арт.jpeg',
+    'download (93).jpeg',
+    'download (92).jpeg',
+    'download (89).jpeg'
+  ];
+
+  function openGlassesModal(){
+      selectedAccessoryType = 'glasses';
+      modalTitle.innerText = 'Choose Glasses — $' + (accessoryPrices[selectedAccessoryType] || 0);
+     optionsContainer.innerHTML = '';
+      selectedAccessoryType = 'glasses';
+    glassesOptions.forEach((fn, i) => {
+     const img = document.createElement('img');
+     img.src = fn;
+      img.alt = fn;
+      img.style.width = '120px';
+      img.style.height = 'auto';
+      img.style.borderRadius = '8px';
+      img.style.cursor = 'pointer';
+      img.style.border = '3px solid transparent';
+      img.dataset.filename = fn;
+      img.addEventListener('click', ()=>{
+        // clear previous
+        optionsContainer.querySelectorAll('img').forEach(n=> n.style.border='3px solid transparent');
+        img.style.border = '3px solid #ff66b2';
+        selectedAccessory = fn;
+      });
+      optionsContainer.appendChild(img);
+    });
+    modal.style.display = 'flex';
+  }
+
+  if (glassesBtn) glassesBtn.addEventListener('click', openGlassesModal);
+    // Purse chooser
+    const purseOptions = [
+      'Сумка пиксель арт.jpeg',
+      'download (96).jpeg',
+      'download (97).jpeg',
+      'download (98).jpeg',
+      'download (99).jpeg'
+    ];
+
+    function openPurseModal(){
+        selectedAccessoryType = 'purse';
+        modalTitle.innerText = 'Choose Purse — $' + (accessoryPrices[selectedAccessoryType] || 0);
+      optionsContainer.innerHTML = '';
+      selectedAccessoryType = 'purse';
+      purseOptions.forEach((fn) => {
+        const img = document.createElement('img');
+        img.src = fn;
+        img.alt = fn;
+        img.style.width = '120px';
+        img.style.height = 'auto';
+        img.style.borderRadius = '8px';
+        img.style.cursor = 'pointer';
+        img.style.border = '3px solid transparent';
+        img.dataset.filename = fn;
+        img.addEventListener('click', ()=>{
+          optionsContainer.querySelectorAll('img').forEach(n=> n.style.border='3px solid transparent');
+          img.style.border = '3px solid #ff66b2';
+          selectedAccessory = fn;
+        });
+        optionsContainer.appendChild(img);
+      });
+      modal.style.display = 'flex';
+    }
+    if (purseBtn) purseBtn.addEventListener('click', openPurseModal);
+  // Jewellery chooser
+  const jewelleryBtn = document.getElementById('accessory-jewellery');
+  const jewelleryOptions = [
+    'download (100).jpeg',
+    'Arcanist\'s Anklet.jpeg',
+    'download - 2026-06-21T114854.531.jpeg',
+    'download - 2026-06-21T114900.197.jpeg',
+    'download - 2026-06-21T114912.424.jpeg',
+    'download - 2026-06-21T114921.500.jpeg',
+    'download - 2026-06-21T114925.496.jpeg'
+  ];
+
+  function openJewelleryModal(){
+    selectedAccessoryType = 'jewellery';
+    modalTitle.innerText = 'Choose Jewellery — $' + (accessoryPrices[selectedAccessoryType] || 0);
+    optionsContainer.innerHTML = '';
+    selectedAccessoryType = 'jewellery';
+    jewelleryOptions.forEach((fn) => {
+      const img = document.createElement('img');
+      img.src = fn;
+      img.alt = fn;
+      img.style.width = '120px';
+      img.style.height = 'auto';
+      img.style.borderRadius = '8px';
+      img.style.cursor = 'pointer';
+      img.style.border = '3px solid transparent';
+      img.dataset.filename = fn;
+      img.addEventListener('click', ()=>{
+        optionsContainer.querySelectorAll('img').forEach(n=> n.style.border='3px solid transparent');
+        img.style.border = '3px solid #ff66b2';
+        selectedAccessory = fn;
+      });
+      optionsContainer.appendChild(img);
+    });
+    modal.style.display = 'flex';
+  }
+  if (jewelleryBtn) jewelleryBtn.addEventListener('click', openJewelleryModal);
+  // Hat chooser
+  const hatBtn = document.getElementById('accessory-hat');
+  const hatOptions = [
+    'download - 2026-06-21T162842.246.jpeg',
+    'download - 2026-06-21T162859.974.jpeg',
+    'download (95).jpeg',
+    '🎀.jpeg'
+  ];
+
+  function openHatModal(){
+    selectedAccessoryType = 'hat';
+    modalTitle.innerText = 'Choose Hat — $' + (accessoryPrices[selectedAccessoryType] || 0);
+    optionsContainer.innerHTML = '';
+    selectedAccessoryType = 'hat';
+    hatOptions.forEach((fn) => {
+      const img = document.createElement('img');
+      img.src = fn;
+      img.alt = fn;
+      img.style.width = '120px';
+      img.style.height = 'auto';
+      img.style.borderRadius = '8px';
+      img.style.cursor = 'pointer';
+      img.style.border = '3px solid transparent';
+      img.dataset.filename = fn;
+      img.addEventListener('click', ()=>{
+        optionsContainer.querySelectorAll('img').forEach(n=> n.style.border='3px solid transparent');
+        img.style.border = '3px solid #ff66b2';
+        selectedAccessory = fn;
+      });
+      optionsContainer.appendChild(img);
+    });
+    modal.style.display = 'flex';
+  }
+  if (hatBtn) hatBtn.addEventListener('click', openHatModal);
+  if (modalClose) modalClose.addEventListener('click', ()=>{ modal.style.display='none'; selectedAccessory=null; });
+  const cancelBtn = document.getElementById('accessory-cancel');
+  if (cancelBtn) cancelBtn.addEventListener('click', ()=>{ modal.style.display='none'; selectedAccessory=null; });
+
+  applyBtn.addEventListener('click', ()=>{
+    if (!selectedAccessory) return alert('Please select an option');
+    // apply overlay into the centered accessory display so items appear in the middle of the screen
+    const center = document.getElementById('accessory-center');
+    const petWrapper = document.querySelector('#pet-thumb').parentElement;
+    // remove existing overlay of the same accessory type (so you can replace glasses but keep purse)
+    if (selectedAccessoryType) {
+      const existingSame = center.querySelector('.accessory-overlay[data-type="' + selectedAccessoryType + '"]');
+      if (existingSame) existingSame.remove();
+    }
+    // create a removable accessory item (image + remove button)
+    const item = document.createElement('div');
+    item.className = 'accessory-item';
+    item.style.position = 'relative';
+    item.style.display = 'inline-block';
+    item.style.marginRight = '6px';
+    if (selectedAccessoryType) item.dataset.type = selectedAccessoryType;
+
+    const img = document.createElement('img');
+    img.className = 'accessory-overlay';
+    img.src = selectedAccessory;
+    img.alt = 'accessory';
+    img.style.width = '120px';
+    img.style.height = 'auto';
+    img.style.pointerEvents = 'auto';
+    img.style.borderRadius = '6px';
+    img.style.display = 'block';
+    item.appendChild(img);
+
+    // price badge for the accessory
+    const priceBadge = document.createElement('div');
+    priceBadge.textContent = '$' + (accessoryPrices[selectedAccessoryType] || '0');
+    priceBadge.style.textAlign = 'center';
+    priceBadge.style.fontWeight = '800';
+    priceBadge.style.color = '#ff66b2';
+    priceBadge.style.marginTop = '6px';
+    item.appendChild(priceBadge);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '×';
+    removeBtn.title = 'Remove accessory';
+    removeBtn.style.position = 'absolute';
+    removeBtn.style.top = '-8px';
+    removeBtn.style.right = '-8px';
+    removeBtn.style.width = '22px';
+    removeBtn.style.height = '22px';
+    removeBtn.style.borderRadius = '50%';
+    removeBtn.style.border = 'none';
+    removeBtn.style.background = '#ff66b2';
+    removeBtn.style.color = '#fff';
+    removeBtn.style.cursor = 'pointer';
+    removeBtn.style.pointerEvents = 'auto';
+    removeBtn.addEventListener('click', ()=> item.remove());
+    item.appendChild(removeBtn);
+
+    center.appendChild(item);
+    // update total when removed
+    removeBtn.addEventListener('click', ()=> setTimeout(updateTotal, 10));
+    updateTotal();
+    modal.style.display = 'none';
+    // reset selection
+    selectedAccessory = null;
+    selectedAccessoryType = null;
+  });
+  // helper to create accessory-item from saved data
+  function createAccessoryItemFromData(data){
+    const {type, filename} = data || {};
+    if (!filename) return null;
+    const center = document.getElementById('accessory-center');
+    // remove existing of same type
+    if (type){ const existingSame = center.querySelector('.accessory-overlay[data-type="' + type + '"]'); if (existingSame) existingSame.parentElement.remove(); }
+    const item = document.createElement('div');
+    item.className = 'accessory-item';
+    item.style.position = 'relative';
+    item.style.display = 'inline-block';
+    item.style.marginRight = '6px';
+    if (type) item.dataset.type = type;
+    const img = document.createElement('img'); img.className = 'accessory-overlay'; img.alt = 'accessory'; img.style.width='120px'; img.style.height='auto'; img.style.pointerEvents='auto'; img.style.borderRadius='6px'; img.style.display='block'; if (type) img.dataset.type = type;
+    // process image to remove near-white background
+    processImageToTrimWhite(filename, function(dataUrl){ img.src = dataUrl; });
+    item.appendChild(img);
+    const priceBadge = document.createElement('div'); priceBadge.textContent = '$' + (accessoryPrices[type] || '0'); priceBadge.style.textAlign='center'; priceBadge.style.fontWeight='800'; priceBadge.style.color='#ff66b2'; priceBadge.style.marginTop='6px'; item.appendChild(priceBadge);
+    const removeBtn = document.createElement('button'); removeBtn.textContent='×'; removeBtn.title='Remove accessory'; removeBtn.style.position='absolute'; removeBtn.style.top='-8px'; removeBtn.style.right='-8px'; removeBtn.style.width='22px'; removeBtn.style.height='22px'; removeBtn.style.borderRadius='50%'; removeBtn.style.border='none'; removeBtn.style.background='#ff66b2'; removeBtn.style.color='#fff'; removeBtn.style.cursor='pointer'; removeBtn.style.pointerEvents='auto'; removeBtn.addEventListener('click', ()=> item.remove()); item.appendChild(removeBtn);
+    center.appendChild(item);
+    removeBtn.addEventListener('click', ()=> setTimeout(updateTotal, 10));
+    return item;
+  }
+
+  // restore pending purchase if present
+  try{
+    const pendingRaw = localStorage.getItem('pendingPurchase');
+    if (pendingRaw){
+      const pending = JSON.parse(pendingRaw);
+      if (pending && Array.isArray(pending.items) && pending.items.length){
+        pending.items.forEach(it=> createAccessoryItemFromData({type: it.type, filename: it.filename}));
+        updateTotal();
+      }
+    }
+  }catch(e){}
+  // no remove-accessory button present; accessories can be removed via modal or overwritten
+  // total calculation and confirm button
+  function updateTotal(){
+    const center = document.getElementById('accessory-center');
+    const items = center.querySelectorAll('.accessory-item');
+    let sum = 0;
+    items.forEach(it=>{
+      const t = it.dataset.type || '';
+      const price = accessoryPrices[t] || 0;
+      sum += price;
+    });
+    const totalBox = document.getElementById('total-box');
+    if (totalBox) totalBox.textContent = 'Total: $' + sum;
+    return sum;
+  }
+  
+  // remove near-white background from an image and return a PNG dataURL
+  function processImageToTrimWhite(src, cb){
+    try{
+      const img = new Image();
+      img.onload = function(){
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const ctx = c.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+        try{
+          const id = ctx.getImageData(0,0,w,h);
+          const data = id.data;
+          for (let i=0;i<data.length;i+=4){
+            const r = data[i], g = data[i+1], b = data[i+2];
+            // if pixel is near-white, make transparent
+            if (r > 240 && g > 240 && b > 240){ data[i+3] = 0; }
+          }
+          ctx.putImageData(id,0,0);
+          cb(c.toDataURL('image/png'));
+        }catch(e){ cb(src); }
+      };
+      img.onerror = function(){ cb(src); };
+      img.src = src;
+    }catch(e){ cb(src); }
+  }
+
+    const confirmBtn = document.getElementById('confirm-purchase');
+  if (confirmBtn){
+    confirmBtn.addEventListener('click', ()=>{
+      const total = updateTotal();
+      if (total <= 0) return alert('No accessories selected');
+      const earned = parseInt(localStorage.getItem('earned')||'0',10) || 0;
+      const center = document.getElementById('accessory-center');
+      if (earned < total){
+        // save pending selection so it can be restored after playing
+        const items = [];
+        center.querySelectorAll('.accessory-item').forEach(it=>{
+          const t = it.dataset.type || '';
+          const imgEl = it.querySelector('img');
+          const filename = imgEl ? imgEl.src : '';
+          items.push({type: t, filename});
+        });
+        try{ localStorage.setItem('pendingPurchase', JSON.stringify({items, total, char: selectedChar, pet: selectedPet})); }catch(e){}
+        // ask user whether to play or view purchases
+        const goPlay = confirm('Not enough funds. Press OK to play to earn money, Cancel to view your purchases.');
+        if (goPlay){
+          window.location.href = 'earn.html?cost=' + encodeURIComponent(total);
+        } else {
+          window.location.href = 'purchases.html';
+        }
+        return;
+      }
+      // collect selected items
+      const items = [];
+      center.querySelectorAll('.accessory-item').forEach(it=>{
+        const t = it.dataset.type || '';
+        const imgEl = it.querySelector('img');
+        const filename = imgEl ? imgEl.src : '';
+        items.push({type: t, filename, price: accessoryPrices[t] || 0});
+      });
+      // save purchase record
+      const purchases = JSON.parse(localStorage.getItem('purchases')||'[]');
+      purchases.push({time: Date.now(), total, items, char: selectedChar, pet: selectedPet});
+      localStorage.setItem('purchases', JSON.stringify(purchases));
+      // deduct balance
+      localStorage.setItem('earned', String(earned - total));
+      // clear any pending saved selection
+      try{ localStorage.removeItem('pendingPurchase'); }catch(e){}
+      // go to purchases page
+      window.location.href = 'purchases.html';
+    });
+  }
+  // play-to-earn button
+  const playToEarnBtn = document.getElementById('play-to-earn-btn');
+  if (playToEarnBtn){ playToEarnBtn.addEventListener('click', ()=>{
+    const total = updateTotal();
+    const center = document.getElementById('accessory-center');
+    const items = [];
+    center.querySelectorAll('.accessory-item').forEach(it=>{
+      const t = it.dataset.type || '';
+      const imgEl = it.querySelector('img');
+      const filename = imgEl ? imgEl.src : '';
+      items.push({type: t, filename});
+    });
+    try{ localStorage.setItem('pendingPurchase', JSON.stringify({items, total, char: selectedChar, pet: selectedPet})); }catch(e){}
+    // navigate to earn game
+    window.location.href = 'earn.html?cost=' + encodeURIComponent(total);
+  }); }
+  // view purchases button
+  const viewPurchasesBtn = document.getElementById('view-purchases-btn');
+  if (viewPurchasesBtn){ viewPurchasesBtn.addEventListener('click', ()=>{ window.location.href = 'purchases.html'; }); }
+})();
+</script>
+<script src="reload-redirect.js"></script>
+</body>
+</html>

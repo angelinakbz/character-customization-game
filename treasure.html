@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Treasure Hunt — Explore</title>
+  <style>
+    body{margin:0;background:linear-gradient(#a8e6ff,#dff7ff);font-family:system-ui,Segoe UI,Roboto,Arial;display:flex;flex-direction:column;align-items:center}
+    .wrap{max-width:1000px;width:100%;padding:16px}
+    h2{color:#ff7ab6;text-align:center}
+    .viewport{width:860px;height:420px;border-radius:12px;overflow:hidden;border:6px solid #fff;box-shadow:0 12px 36px rgba(0,0,0,0.12);background:linear-gradient(#87ceeb,#cdeeff);position:relative;margin:12px auto}
+    .world{position:absolute;left:0;top:0;height:100%;width:2000px;transition:left 0s}
+    /* simple layered hills */
+    .hill{position:absolute;bottom:0;height:220px;border-radius:50%;filter:drop-shadow(0 6px 6px rgba(0,0,0,0.06));}
+    .hill.h1{width:900px;left:50px;background:linear-gradient(#7ad67a,#4caf50);height:240px;bottom:-40px}
+    .hill.h2{width:700px;left:600px;background:linear-gradient(#8fdc85,#5ccf58);height:200px;bottom:-20px}
+    .hill.h3{width:500px;left:1300px;background:linear-gradient(#9fe0a2,#6ed06b);height:220px;bottom:-30px}
+    .tree{position:absolute;width:36px;height:60px;border-radius:6px;background:#2e7d32}
+    .rock{position:absolute;width:40px;height:20px;border-radius:6px;background:#7f7f7f}
+    .treasure{position:absolute;width:44px;height:36px;background:linear-gradient(#ffd54f,#ffb300);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:900;cursor:pointer}
+    .character{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);width:120px;pointer-events:none}
+    .pet{position:absolute;bottom:28px;left:calc(50% - 90px);width:48px;pointer-events:none}
+    .hud{display:flex;gap:12px;justify-content:center;align-items:center;margin-top:8px}
+    .btn{padding:8px 12px;border-radius:8px;border:none;background:#ff66b2;color:#fff}
+    #hint{margin-top:8px;color:#444;text-align:center}
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center}
+    .modal .card{background:#fff;padding:18px;border-radius:10px;max-width:420px;width:90%;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>Treasure Hunt — Explore the landscape</h2>
+    <div class="hud"><button id="back" class="btn">Back</button><div id="balance">Balance: $<span id="bal">0</span></div></div>
+    <div class="viewport" id="viewport">
+      <div class="world" id="world">
+        <div class="hill h1"></div>
+        <div class="hill h2"></div>
+        <div class="hill h3"></div>
+        <!-- scenery placeholders inserted by JS -->
+      </div>
+      <img id="char" class="character" src="" alt="character" style="display:none;z-index:30">
+      <img id="pet" class="pet" src="" alt="pet" style="display:none;z-index:31">
+    </div>
+    <div id="hint">Drag or use ← → to look around the landscape. Click where you think the treasure is.</div>
+  </div>
+
+  <div class="modal" id="modal"><div class="card"><div id="modal-title" style="font-weight:800;margin-bottom:8px"></div><div id="modal-body" style="margin-bottom:12px"></div><div style="display:flex;gap:8px;justify-content:center"><button id="modal-close" class="btn">Close</button><button id="claim" class="btn">Claim Reward</button></div></div></div>
+
+<script>
+(function(){
+  const viewport = document.getElementById('viewport');
+  const world = document.getElementById('world');
+  const balEl = document.getElementById('bal');
+  const modal = document.getElementById('modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalBody = document.getElementById('modal-body');
+  const modalClose = document.getElementById('modal-close');
+  const claimBtn = document.getElementById('claim');
+
+  // load most recent purchased char/pet if available
+  const purchases = JSON.parse(localStorage.getItem('purchases')||'[]');
+  let charSrc = '';
+  let petSrc = '';
+  if (purchases.length){ const last = purchases[purchases.length-1]; charSrc = last.char || ''; petSrc = last.pet || ''; }
+  const charImg = document.getElementById('char'); const petImg = document.getElementById('pet');
+  if (charSrc){ charImg.src = charSrc; charImg.style.display='block'; }
+  if (petSrc){ petImg.src = petSrc; petImg.style.display='block'; }
+
+  // show balance
+  const earned = parseInt(localStorage.getItem('earned')||'0',10) || 0; balEl.textContent = earned;
+
+  // populate random scenery
+  function rand(min,max){ return Math.floor(min + Math.random()*(max-min+1)); }
+  for (let i=0;i<18;i++){
+    const t = document.createElement('div'); t.className='tree'; t.style.left = rand(20, 1900) + 'px'; t.style.bottom = rand(60, 120) + 'px'; t.style.height = (40 + Math.random()*60)+'px'; world.appendChild(t);
+  }
+  for (let i=0;i<8;i++){
+    const r = document.createElement('div'); r.className='rock'; r.style.left = rand(40, 1960) + 'px'; r.style.bottom = rand(10, 40) + 'px'; world.appendChild(r);
+  }
+
+  // place treasure at random coordinates within world
+  const treasure = document.createElement('div'); treasure.className='treasure'; treasure.textContent='💰';
+  const treasureX = rand(200, 1800); const treasureY = rand(40, 260);
+  treasure.style.left = treasureX + 'px'; treasure.style.bottom = treasureY + 'px';
+  treasure.dataset.found = '0';
+  world.appendChild(treasure);
+
+  // panning
+  let isDown=false, startX=0, worldLeft=0;
+  viewport.addEventListener('pointerdown', (e)=>{ isDown=true; startX = e.clientX; viewport.setPointerCapture(e.pointerId); });
+  viewport.addEventListener('pointermove', (e)=>{ if (!isDown) return; const dx = e.clientX - startX; startX = e.clientX; worldLeft = Math.min(0, Math.max(worldLeft + dx, viewport.clientWidth - world.offsetWidth)); world.style.left = worldLeft + 'px'; });
+  viewport.addEventListener('pointerup', (e)=>{ isDown=false; try{ viewport.releasePointerCapture(e.pointerId);}catch(e){} });
+  // keyboard pan
+  window.addEventListener('keydown', (e)=>{ if (e.key === 'ArrowLeft'){ worldLeft = Math.min(0, worldLeft + 60); world.style.left = worldLeft + 'px'; } if (e.key==='ArrowRight'){ worldLeft = Math.max(viewport.clientWidth - world.offsetWidth, worldLeft - 60); world.style.left = worldLeft + 'px'; } });
+
+  // click detection
+  viewport.addEventListener('click', (e)=>{
+    // convert click to world coords
+    const rect = viewport.getBoundingClientRect();
+    const clickX = e.clientX - rect.left - worldLeft; // world-space x
+    const clickY = rect.bottom - e.clientY; // approximate world-space bottom-based y
+    const tX = treasureX; const tY = treasureY;
+    const dx = Math.abs(clickX - tX); const dy = Math.abs(clickY - tY);
+    if (dx < 30 && dy < 30 && treasure.dataset.found === '0'){
+      // found
+      treasure.dataset.found = '1';
+      treasure.style.transform = 'scale(1.1)';
+      modalTitle.textContent = 'You found the treasure!';
+      modalBody.textContent = 'Nice exploring — you discovered a hidden treasure.\nClick the button below to finish the game.';
+      modal.style.display = 'flex';
+      // reveal treasure visually
+      treasure.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2)';
+      // change modal actions to single finish button
+      claimBtn.style.display = 'none';
+      modalClose.style.display = 'none';
+      // create finish button
+      const finish = document.createElement('button'); finish.className='btn'; finish.textContent = 'Buy House';
+      finish.addEventListener('click', ()=>{
+        const prev = parseInt(localStorage.getItem('earned')||'0',10) || 0;
+        localStorage.setItem('earned', String(prev + 500));
+        // go to house selection page
+        window.location.href='houses.html';
+      });
+      const card = modal.querySelector('.card');
+      // append finish button beneath actions (ensure only one)
+      const actions = document.createElement('div'); actions.style.marginTop='12px'; actions.appendChild(finish);
+      card.appendChild(actions);
+    }
+  });
+
+  // keep default modal buttons hidden until found; but wire close to just hide
+  modalClose.addEventListener('click', ()=>{ modal.style.display='none'; });
+  claimBtn.addEventListener('click', ()=>{
+    if (treasure.dataset.found === '1'){
+      const prev = parseInt(localStorage.getItem('earned')||'0',10) || 0; localStorage.setItem('earned', String(prev + 20));
+      modal.style.display='none'; window.location.href='character.html';
+    } else { modal.style.display='none'; }
+  });
+
+  document.getElementById('back').addEventListener('click', ()=> window.location.href='gift.html');
+})();
+</script>
+<script src="reload-redirect.js"></script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Buy a House</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f6fbff}
+    .wrap{max-width:1000px;margin:24px auto;padding:16px}
+    h2{color:#3b82f6}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px}
+    .card{background:#fff;border-radius:10px;padding:8px;box-shadow:0 6px 18px rgba(0,0,0,0.06);text-align:center}
+    .card img{max-width:100%;height:160px;object-fit:cover;border-radius:6px}
+    .btn{padding:8px 12px;border-radius:8px;border:none;background:#10b981;color:#fff;cursor:pointer;margin-top:8px}
+    #bal{font-weight:800}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>Choose a House</h2>
+    <div>Balance: $<span id="bal">0</span></div>
+    <p>Select a house below to choose it. Your selection will be saved and you will return to the homepage.</p>
+
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <script>
+  (function(){
+    const images = [
+      'download - 2026-06-22T182024.007.jpeg',
+      'download - 2026-06-22T181946.971.jpeg',
+      'download - 2026-06-22T181851.988.jpeg',
+      'home home.jpeg'
+    ];
+    const grid = document.getElementById('grid');
+    const balEl = document.getElementById('bal');
+    const earned = parseInt(localStorage.getItem('earned')||'0',10) || 0; balEl.textContent = earned;
+
+    function makeCard(src){
+      const div = document.createElement('div'); div.className='card';
+      const img = document.createElement('img'); img.src = src; img.alt = src;
+      // no visible filename label for cleaner UI
+      const btn = document.createElement('button'); btn.className='btn'; btn.textContent='Select this house';
+      btn.addEventListener('click', ()=>{
+        // save selection
+        localStorage.setItem('selectedHouse', src);
+        // record purchase entry
+        try{
+          const purchases = JSON.parse(localStorage.getItem('purchases')||'[]');
+          purchases.push({house: src, time: Date.now()});
+          localStorage.setItem('purchases', JSON.stringify(purchases));
+        }catch(e){ localStorage.setItem('purchases', JSON.stringify([{house: src, time: Date.now()}])); }
+        // mark that the user just selected a house so house.html shows interior-only
+        try{ localStorage.setItem('justSelectedHouse','1'); }catch(e){}
+        // navigate to house interior page
+        window.location.href = 'house.html';
+      });
+      div.appendChild(img); div.appendChild(btn);
+      return div;
+    }
+
+    images.forEach(s=> grid.appendChild(makeCard(s)));
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Choose your pet</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { padding: 0; }
+    .pet-full {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      background: #ffd6e8;
+      margin: 0;
+      padding-top: 76px; /* leave space for top header */
+    }
+    .pet-text {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #ff66b2;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .selected-thumb {
+      width: 160px;
+      height: auto;
+      border-radius: 10px;
+      margin-left: 26px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      background: #fff;
+      padding: 6px;
+      flex: 0 0 auto;
+    }
+    .pet-area {
+      flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-right: 26px;
+    }
+  </style>
+</head>
+<body>
+  <button id="back-button" class="back-button">Back</button>
+  <div class="pet-header">
+    <div class="pet-text">Choose your pet</div>
+  </div>
+    <div class="pet-full">
+    <img id="selected-thumb" class="selected-thumb" src="" alt="selected character" style="display:none">
+    <div class="pet-area">
+      <div id="pet-chooser" style="display:flex;align-items:center;gap:12px;">
+        <button id="prev-pet" class="char-arrow" aria-label="previous pet">◀</button>
+        <div style="width:360px;height:360px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.95);border-radius:12px;padding:0.5rem;box-shadow:0 10px 30px rgba(0,0,0,0.08);">
+          <img id="pet-image" src="" alt="pet option" style="max-width:100%;max-height:92%;border-radius:10px;object-fit:contain;">
+        </div>
+        <button id="next-pet" class="char-arrow" aria-label="next pet">▶</button>
+        <button id="shuffle-pet" class="shuffle-button" aria-label="shuffle pets">🔀</button>
+        <div id="pet-caption" class="char-caption" style="margin-left:8px"></div>
+        <button id="select-pet" class="select-button" style="margin-left:8px">Select</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const backBtn = document.getElementById('back-button');
+    const params = new URLSearchParams(window.location.search);
+    const selectedChar = params.get('char') || '';
+
+    // show selected character thumbnail on the left if provided
+    const thumb = document.getElementById('selected-thumb');
+    if (selectedChar && thumb) {
+      thumb.src = selectedChar;
+      thumb.alt = 'Selected character';
+      thumb.style.display = 'block';
+    } else if (thumb) {
+      thumb.style.display = 'none';
+    }
+
+    // Pet chooser logic: list and controls (shuffle/prev/next)
+    const pets = [
+      'download (69).jpeg',
+      'download (81).jpeg',
+      'download (82).jpeg',
+      'download (83).jpeg',
+      'download (84).jpeg',
+      'download (85).jpeg',
+      'download (86).jpeg',
+      'download (87).jpeg',
+      'download (88).jpeg',
+      'download (90).jpeg',
+      'download (91).jpeg',
+      'pixel my melody🍥🖇️.jpeg',
+      'penguin.jpeg',
+      '𝐤𝐢𝐭𝐭𝐲❤︎︎.jpeg',
+      'fox.jpeg',
+      'Cinna-baby!!.jpeg',
+      '#pixelart #froggy #cuteart.jpeg',
+      '#pixelart #capybara #cuteart.jpeg',
+      'Izzy 😋.jpeg'
+    ];
+
+    let petOrder = pets.slice();
+    let petIndex = 0;
+
+    const petImage = document.getElementById('pet-image');
+    const petCaption = document.getElementById('pet-caption');
+    const prevPet = document.getElementById('prev-pet');
+    const nextPet = document.getElementById('next-pet');
+    const shufflePet = document.getElementById('shuffle-pet');
+
+    function showPet(i) {
+      if (!petImage) return;
+      petIndex = (i + petOrder.length) % petOrder.length;
+      petImage.src = encodeURIComponent(petOrder[petIndex]);
+      petImage.alt = `pet ${petIndex+1}`;
+      if (petCaption) petCaption.textContent = `${petIndex+1} / ${petOrder.length}`;
+    }
+
+    function shuffleArrayLocal(a) {
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+    }
+
+    if (prevPet) prevPet.addEventListener('click', () => showPet(petIndex - 1));
+    if (nextPet) nextPet.addEventListener('click', () => showPet(petIndex + 1));
+    if (shufflePet) shufflePet.addEventListener('click', () => { shuffleArrayLocal(petOrder); showPet(0); });
+
+    // initialize pet chooser; if URL provided a pet param, attempt to show that pet first
+    (function initPets(){
+      const desiredPet = params.get('pet') || '';
+      petOrder = pets.slice();
+      let idx = petOrder.indexOf(desiredPet);
+      if (idx === -1) idx = 0;
+      showPet(idx);
+    })();
+
+    // Select button: go to game.html with char and pet params
+    const selectPetBtn = document.getElementById('select-pet');
+    if (selectPetBtn) {
+      selectPetBtn.addEventListener('click', () => {
+        const qp = new URLSearchParams();
+        if (selectedChar) qp.set('char', selectedChar);
+        if (petOrder && petOrder[petIndex]) qp.set('pet', petOrder[petIndex]);
+        try{ if (selectedChar) localStorage.setItem('selectedCharacter', selectedChar); if (petOrder && petOrder[petIndex]) localStorage.setItem('selectedPet', petOrder[petIndex]); }catch(e){}
+        window.location.href = 'game.html?' + qp.toString();
+      });
+    }
+
+    if (backBtn) backBtn.addEventListener('click', () => {
+      const out = new URLSearchParams();
+      out.set('choose', '1');
+      if (selectedChar) out.set('char', selectedChar);
+      window.location.href = 'index.html?' + out.toString();
+    });
+  </script>
+    <script src="reload-redirect.js"></script>
+</body>
+</html>
