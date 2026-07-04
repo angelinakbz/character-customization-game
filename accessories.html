@@ -6,14 +6,29 @@
   <title>Choose Accessories</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    body { margin:0; background:#ffd6e8; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; }
-    .wrap { max-width:960px; margin:24px auto; padding:12px; }
-    .header { display:flex; align-items:center; justify-content:center; position:relative; }
-    .title { font-weight:900; color:#ff66b2; background:#fff; padding:8px 14px; border-radius:10px; }
-    .thumbs { display:flex; gap:12px; margin:18px 0; align-items:center; }
-    .thumbs img { width:120px; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,0.08); background:#fff; padding:6px; }
-    .accessories { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; }
-    .accessory { background:#fff; border-radius:10px; padding:8px; text-align:center; box-shadow:0 8px 20px rgba(0,0,0,0.06); }
+    body { margin:0; background:linear-gradient(135deg,#fff4fb 0%,#ffe3ef 45%,#ffe9c8 100%); font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; color:#4b2e3f; }
+    .wrap { max-width:1040px; margin:24px auto; padding:16px; }
+    .header { display:flex; align-items:center; justify-content:center; position:relative; margin-bottom:12px; }
+    .title { font-weight:900; color:#ff66b2; background:#fff; padding:10px 16px; border-radius:999px; box-shadow:0 10px 24px rgba(255,102,178,0.16); }
+    .thumbs { display:flex; gap:16px; margin:18px 0; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+    .thumbs > div { text-align:center; }
+    .thumbs .thumb-wrapper { display:inline-flex; align-items:center; justify-content:center; min-width:110px; min-height:110px; background:#fff; border:2px solid #ffd4e7; border-radius:18px; padding:8px; box-shadow:0 10px 20px rgba(0,0,0,0.08); }
+    .thumbs img { width:88px; height:88px; object-fit:contain; border-radius:14px; box-shadow:none; background:transparent; padding:0; display:block; }
+    .hero-card { display:flex; align-items:center; justify-content:space-between; gap:16px; background:rgba(255,255,255,0.92); border:2px solid rgba(255,102,178,0.18); border-radius:24px; padding:16px; box-shadow:0 14px 30px rgba(0,0,0,0.08); margin-bottom:16px; }
+    .hero-copy h2 { margin:4px 0 6px; color:#ff66b2; font-size:1.2rem; }
+    .hero-copy p { margin:0; color:#7a576d; font-size:0.95rem; }
+    .eyebrow { display:inline-block; padding:5px 10px; background:#ffe5f0; color:#c74b86; border-radius:999px; font-size:0.8rem; font-weight:800; }
+    .hero-image { width:120px; height:120px; object-fit:cover; border-radius:20px; border:3px solid #fff; box-shadow:0 10px 20px rgba(0,0,0,0.1); }
+    .action-row { display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin:10px 0 16px; }
+    .accessories { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; margin-top:8px; }
+    .accessory { background:linear-gradient(135deg,#ffffff 0%,#fff4fa 100%); border:3px solid #ffc2dc; border-radius:20px; padding:16px 14px; text-align:center; box-shadow:0 12px 28px rgba(0,0,0,0.10); cursor:pointer; transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease; min-height:120px; display:flex; flex-direction:column; justify-content:center; align-items:center; }
+    .accessory:hover { transform:translateY(-3px); box-shadow:0 16px 32px rgba(255,102,178,0.20); border-color:#ff66b2; }
+    .accessory:focus-visible { outline:3px solid #ff66b2; outline-offset:2px; }
+    .accessory.is-selected { background:linear-gradient(135deg,#ffe5f0 0%,#fff8fc 100%); border-color:#ff66b2; box-shadow:0 16px 32px rgba(255,102,178,0.24); transform:translateY(-2px); }
+    .accessory-icon { font-size:2rem; display:block; margin-bottom:8px; }
+    .accessory-label { font-weight:900; color:#4b2e3f; display:block; font-size:1rem; }
+    .accessory-price { font-weight:900; color:#ff66b2; margin-top:6px; font-size:0.95rem; }
+    .accessory-hint { font-size:0.95rem; color:#7a576d; margin-bottom:8px; }
     .back { position:absolute; left:12px; }
   </style>
 </head>
@@ -23,48 +38,47 @@
       <button id="back-pet" class="back-button">Back</button>
       <div class="title">Choose Accessories</div>
     </div>
+    <div class="hero-card">
+      <div class="hero-copy">
+        <div class="eyebrow">Cute style picks ✨</div>
+        <h2>Pick accessories that match your vibe</h2>
+        <p>Choose fun pieces for your character and build a look you love.</p>
+      </div>
+      <img src="🎧.jpeg" class="hero-image" alt="Accessory inspiration">
+    </div>
     <div style="text-align:center;margin-top:8px;margin-bottom:6px">
       <div id="current-balance" style="font-weight:900;color:#333">Current balance: $0</div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:8px">
+    <div class="action-row">
       <div id="total-box" style="font-weight:900;color:#333">Total: $0</div>
       <button id="play-to-earn-btn" class="btn" style="background:#06b6d4;color:#fff;border:none;padding:8px 12px;border-radius:8px;">play to earn money</button>
       <button id="view-purchases-btn" class="btn" style="background:#f59e0b;color:#fff;border:none;padding:8px 12px;border-radius:8px;">View Purchases</button>
       <button id="confirm-purchase" class="btn" style="background:#ff66b2;color:#fff;border:none;padding:8px 12px;border-radius:8px;">Confirm Purchase</button>
     </div>
 
-    <div class="thumbs">
-      <div>
-        <div style="font-weight:800;color:#ff66b2;margin-bottom:6px">Selected Character</div>
-        <div class="thumb-wrapper" style="position:relative;display:inline-block">
-          <img id="char-thumb" src="" alt="character" style="display:none">
-        </div>
-      </div>
-      <div>
-        <div style="font-weight:800;color:#ff66b2;margin-bottom:6px">Selected Pet</div>
-        <div class="thumb-wrapper" style="position:relative;display:inline-block">
-          <img id="pet-thumb" src="" alt="pet" style="display:none">
-          <div class="accessory-slot" style="display:inline-block;vertical-align:top;margin-left:12px;min-width:96px;min-height:80px;
-              background:transparent;border-radius:8px"></div>
-        </div>
-      </div>
-    </div>
-
-    <div style="margin:12px 0;font-weight:800;color:#ff66b2">Pick accessories</div>
-    <div style="margin-bottom:12px;color:#333;font-size:14px">click on accessory type to select one</div>
+    <div style="margin:12px 0;font-weight:900;color:#ff66b2;font-size:1.05rem">Pick accessories</div>
+    <div class="accessory-hint">Tap any card below to open the style options and choose one</div>
     <div class="accessories" id="accessories-grid">
       <!-- updated accessory options -->
-        <div id="accessory-glasses" class="accessory" data-name="Glasses">Glasses
-          <div style="font-weight:800;color:#333;margin-top:6px">$10</div>
-        </div>
-        <div id="accessory-purse" class="accessory" data-name="Purse">Purse
-          <div style="font-weight:800;color:#333;margin-top:6px">$100</div>
-        </div>
-      <div id="accessory-hat" class="accessory" data-name="Hat">Hat
-          <div style="font-weight:800;color:#333;margin-top:6px">$20</div>
+      <div id="accessory-glasses" class="accessory" data-name="Glasses">
+        <span class="accessory-icon">👓</span>
+        <span class="accessory-label">Glasses</span>
+        <div class="accessory-price">$10</div>
       </div>
-      <div id="accessory-jewellery" class="accessory" data-name="Jewellery">Jewellery
-          <div style="font-weight:800;color:#333;margin-top:6px">$60</div>
+      <div id="accessory-purse" class="accessory" data-name="Purse">
+        <span class="accessory-icon">👜</span>
+        <span class="accessory-label">Purse</span>
+        <div class="accessory-price">$100</div>
+      </div>
+      <div id="accessory-hat" class="accessory" data-name="Hat">
+        <span class="accessory-icon">🎀</span>
+        <span class="accessory-label">Hat</span>
+        <div class="accessory-price">$20</div>
+      </div>
+      <div id="accessory-jewellery" class="accessory" data-name="Jewellery">
+        <span class="accessory-icon">💍</span>
+        <span class="accessory-label">Jewellery</span>
+        <div class="accessory-price">$60</div>
       </div>
     </div>
 
@@ -101,31 +115,53 @@
   // If no `char` param, fall back to a persisted `selectedCharacter` in localStorage.
   let effectiveChar = selectedChar;
   if (!effectiveChar){ try{ effectiveChar = localStorage.getItem('selectedCharacter') || ''; }catch(e){} }
+  let effectivePet = selectedPet;
+  if (!effectivePet){ try{ effectivePet = localStorage.getItem('selectedPet') || ''; }catch(e){} }
+  function resolveImageSrc(src){
+    if (!src) return '';
+    const value = String(src).trim();
+    if (!value) return '';
+    return encodeURIComponent(value);
+  }
   function trySetCharThumb(src){
     if (!charThumb) return;
-    // show debug filename
+    const normalizedSrc = resolveImageSrc(src);
     const dbg = document.getElementById('char-debug'); if (dbg) dbg.textContent = src;
     charThumb.style.display = 'block';
     charThumb.onerror = function(){
       // try alternative transforms
-      try{ const alt = decodeURIComponent(src); if (alt !== src){ charThumb.onerror=null; charThumb.src = alt; return; } }catch(e){}
-      try{ const alt2 = decodeURI(src); if (alt2 !== src){ charThumb.onerror=null; charThumb.src = alt2; return; } }catch(e){}
+      try{ const alt = decodeURIComponent(src); if (alt !== src){ charThumb.onerror=null; charThumb.src = resolveImageSrc(alt); return; } }catch(e){}
+      try{ const alt2 = decodeURI(src); if (alt2 !== src){ charThumb.onerror=null; charThumb.src = resolveImageSrc(alt2); return; } }catch(e){}
       // last resort: replace %20 with space
-      try{ const alt3 = src.replace(/%20/g,' '); if (alt3 !== src){ charThumb.onerror=null; charThumb.src = alt3; return; } }catch(e){}
+      try{ const alt3 = src.replace(/%20/g,' '); if (alt3 !== src){ charThumb.onerror=null; charThumb.src = resolveImageSrc(alt3); return; } }catch(e){}
       // still failing: hide and mark
       charThumb.style.display = 'none'; if (dbg) dbg.textContent = 'image not found: ' + src;
     };
-    charThumb.src = src;
+    charThumb.src = normalizedSrc;
   }
   if (effectiveChar){ trySetCharThumb(effectiveChar); }
+  else {
+    const charThumbWrap = document.getElementById('char-thumb')?.parentElement;
+    if (charThumbWrap) charThumbWrap.style.display = 'flex';
+  }
+  if (effectiveChar) {
+    const charThumbWrap = charThumb?.parentElement;
+    if (charThumbWrap) charThumbWrap.style.display = 'flex';
+  }
   // show debug area for filename or error
-  const thumbWrap = document.querySelector('.thumb-wrapper');
-  if (thumbWrap){
+  const charThumbWrap = charThumb ? charThumb.parentElement : null;
+  if (charThumbWrap){
     let dbg = document.getElementById('char-debug');
-    if (!dbg){ dbg = document.createElement('div'); dbg.id = 'char-debug'; dbg.style.fontSize='12px'; dbg.style.color='#555'; dbg.style.marginTop='6px'; thumbWrap.appendChild(dbg); }
+    if (!dbg){ dbg = document.createElement('div'); dbg.id = 'char-debug'; dbg.style.fontSize='12px'; dbg.style.color='#555'; dbg.style.marginTop='6px'; charThumbWrap.appendChild(dbg); }
   }
   // pet param remains optional
-  if (selectedPet && petThumb) { petThumb.src = selectedPet; petThumb.style.display = 'block'; }
+  if (effectivePet && petThumb) {
+    petThumb.src = resolveImageSrc(effectivePet);
+    petThumb.style.display = 'block';
+  }
+  else if (petThumb) {
+    petThumb.style.display = 'none';
+  }
 
   const back = document.getElementById('back-pet');
   if (back) back.addEventListener('click', ()=>{
@@ -146,6 +182,9 @@
   // Accessory selection: glasses options
   const glassesBtn = document.getElementById('accessory-glasses');
     const purseBtn = document.getElementById('accessory-purse');
+  const hatBtn = document.getElementById('accessory-hat');
+  const jewelleryBtn = document.getElementById('accessory-jewellery');
+  const accessoryCards = document.querySelectorAll('.accessory');
   const modal = document.getElementById('accessory-modal');
     const modalTitle = document.getElementById('accessory-modal-title');
   const optionsContainer = document.getElementById('accessory-options');
@@ -167,8 +206,13 @@
     'download (89).jpeg'
   ];
 
+  function setActiveCard(activeBtn){
+    accessoryCards.forEach(card => card.classList.toggle('is-selected', card === activeBtn));
+  }
+
   function openGlassesModal(){
       selectedAccessoryType = 'glasses';
+      setActiveCard(glassesBtn);
       modalTitle.innerText = 'Choose Glasses — $' + (accessoryPrices[selectedAccessoryType] || 0);
      optionsContainer.innerHTML = '';
       selectedAccessoryType = 'glasses';
@@ -205,6 +249,7 @@
 
     function openPurseModal(){
         selectedAccessoryType = 'purse';
+        setActiveCard(purseBtn);
         modalTitle.innerText = 'Choose Purse — $' + (accessoryPrices[selectedAccessoryType] || 0);
       optionsContainer.innerHTML = '';
       selectedAccessoryType = 'purse';
@@ -242,6 +287,7 @@
 
   function openJewelleryModal(){
     selectedAccessoryType = 'jewellery';
+    setActiveCard(jewelleryBtn);
     modalTitle.innerText = 'Choose Jewellery — $' + (accessoryPrices[selectedAccessoryType] || 0);
     optionsContainer.innerHTML = '';
     selectedAccessoryType = 'jewellery';
@@ -276,6 +322,7 @@
 
   function openHatModal(){
     selectedAccessoryType = 'hat';
+    setActiveCard(hatBtn);
     modalTitle.innerText = 'Choose Hat — $' + (accessoryPrices[selectedAccessoryType] || 0);
     optionsContainer.innerHTML = '';
     selectedAccessoryType = 'hat';
@@ -299,9 +346,9 @@
     modal.style.display = 'flex';
   }
   if (hatBtn) hatBtn.addEventListener('click', openHatModal);
-  if (modalClose) modalClose.addEventListener('click', ()=>{ modal.style.display='none'; selectedAccessory=null; });
+  if (modalClose) modalClose.addEventListener('click', ()=>{ modal.style.display='none'; selectedAccessory=null; setActiveCard(null); });
   const cancelBtn = document.getElementById('accessory-cancel');
-  if (cancelBtn) cancelBtn.addEventListener('click', ()=>{ modal.style.display='none'; selectedAccessory=null; });
+  if (cancelBtn) cancelBtn.addEventListener('click', ()=>{ modal.style.display='none'; selectedAccessory=null; setActiveCard(null); });
 
   applyBtn.addEventListener('click', ()=>{
     if (!selectedAccessory) return alert('Please select an option');
