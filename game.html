@@ -29,7 +29,7 @@
       <div class="title">Jump Game</div>
       <img id="game-pet-thumb" src="" alt="selected pet" style="position:absolute;right:18px;top:12px;width:64px;height:auto;border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.08);display:none;">
     </div>
-    <div class="game-instruction">Jump over 10 blocks to collect your pet</div>
+    <div class="game-instruction">Jump over 15 blocks to collect your pet</div>
 
     <div class="game-area" id="game-area">
       <canvas id="game-canvas" width="900" height="360"></canvas>
@@ -37,7 +37,7 @@
       <div id="start-overlay" class="overlay">
         <div class="panel">
           <div style="font-weight:900;color:var(--accent);font-size:1.2rem;margin-bottom:8px">Ready?</div>
-          <div style="margin-bottom:8px;font-weight:700;color:#ff66b2">Jump over 10 blocks to collect your pet</div>
+          <div style="margin-bottom:8px;font-weight:700;color:#ff66b2">Jump over 15 blocks to collect your pet</div>
           <button id="start-btn" class="btn">Start</button>
         </div>
       </div>
@@ -142,7 +142,7 @@
       const ob = obstacles[i];
       ob.x -= (200 * dt/1000); // 200 px/s
       // check pass
-      if (!ob.passed && ob.x + ob.w < player.x) { ob.passed = true; score++; updateScore(); if (score >= 10) { win(); return; } }
+      if (!ob.passed && ob.x + ob.w < player.x) { ob.passed = true; score++; updateScore(); if (score >= 15) { win(); return; } }
       // collision
       if (rectsOverlap(player.x, player.y - player.h, player.w, player.h, ob.x, ob.y, ob.w, ob.h)) {
         lose(); return;
@@ -197,7 +197,14 @@
   function win(){ running=false; won=true; winOverlay.classList.remove('hidden'); winCount.textContent = score; }
 
   // controls
-  document.addEventListener('keydown', (e)=>{ if (e.code === 'Space'){ e.preventDefault(); jump(); } });
+  function handleJumpTrigger(e){
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    jump();
+  }
+
+  document.addEventListener('keydown', (e)=>{ if (e.code === 'Space'){ handleJumpTrigger(e); } });
+  canvas.addEventListener('click', handleJumpTrigger);
+  canvas.addEventListener('touchstart', handleJumpTrigger, { passive: false });
   startBtn.addEventListener('click', ()=>{ startGame(); requestAnimationFrame(gameLoop); });
   restartBtn.addEventListener('click', ()=>{ resetGame(); });
   // Next button: go to accessories page with selected char and pet

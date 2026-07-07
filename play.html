@@ -123,8 +123,14 @@
       player.canDouble = false;
     }
   }
-  window.addEventListener('keydown', (e)=>{ if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); jump(); } });
-  canvas.addEventListener('click', ()=> jump());
+  function handleJumpTrigger(e){
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    jump();
+  }
+
+  window.addEventListener('keydown', (e)=>{ if (e.code === 'Space' || e.key === ' ') handleJumpTrigger(e); });
+  canvas.addEventListener('click', handleJumpTrigger);
+  canvas.addEventListener('touchstart', handleJumpTrigger, { passive: false });
 
   // show modals
   const modal = document.getElementById('modal');
