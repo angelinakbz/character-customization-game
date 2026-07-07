@@ -356,11 +356,10 @@
   const cancelBtn = document.getElementById('accessory-cancel');
   if (cancelBtn) cancelBtn.addEventListener('click', ()=>{ modal.style.display='none'; selectedAccessory=null; setActiveCard(null); });
 
-  applyBtn.addEventListener('click', ()=>{
+  if (applyBtn) applyBtn.addEventListener('click', ()=>{
     if (!selectedAccessory) return alert('Please select an option');
     // apply overlay into the centered accessory display so items appear in the middle of the screen
     const center = document.getElementById('accessory-center');
-    const petWrapper = document.querySelector('#pet-thumb').parentElement;
     // remove existing overlay of the same accessory type (so you can replace glasses but keep purse)
     if (selectedAccessoryType) {
       const existingSame = center.querySelector('.accessory-overlay[data-type="' + selectedAccessoryType + '"]');
@@ -376,7 +375,7 @@
 
     const img = document.createElement('img');
     img.className = 'accessory-overlay';
-    img.src = selectedAccessory;
+    img.src = resolveImageSrc(selectedAccessory);
     img.alt = 'accessory';
     img.style.width = '120px';
     img.style.height = 'auto';
