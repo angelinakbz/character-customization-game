@@ -15,7 +15,7 @@
 <body>
   <div class="wrap">
     <h2 style="text-align:center;color:#064e3b">Jump & Dodge — Play</h2>
-    <div class="hud"><button id="back" class="btn">Back</button><div id="score">Score: 0</div><div id="jumps">Jumps: 0/5</div></div>
+    <div class="hud"><button id="back" class="btn">Back</button><div id="score">Score: 0</div><div id="jumps">Jumps: 0/15</div></div>
     <canvas id="game" width="800" height="300"></canvas>
   </div>
   <!-- modals -->
@@ -43,7 +43,7 @@
   const W = canvas.width, H = canvas.height;
 
   let score = 0; document.getElementById('score').textContent = 'Score: ' + score;
-  const WIN_JUMPS = 5;
+  const WIN_JUMPS = 15;
   let jumpCount = 0; document.getElementById('jumps').textContent = `Jumps: ${jumpCount}/${WIN_JUMPS}`;
   let gameEnded = false;
 
