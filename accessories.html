@@ -199,6 +199,13 @@
     jewellery: 60
   };
 
+  function resolveImageSrc(src){
+    if (!src) return '';
+    const value = String(src).trim();
+    if (!value) return '';
+    return encodeURIComponent(value);
+  }
+
   const glassesOptions = [
     'Очки пиксель арт.jpeg',
     'download (93).jpeg',
@@ -218,10 +225,11 @@
       selectedAccessoryType = 'glasses';
     glassesOptions.forEach((fn, i) => {
      const img = document.createElement('img');
-     img.src = fn;
+     img.src = resolveImageSrc(fn);
       img.alt = fn;
       img.style.width = '120px';
-      img.style.height = 'auto';
+      img.style.height = '120px';
+      img.style.objectFit = 'cover';
       img.style.borderRadius = '8px';
       img.style.cursor = 'pointer';
       img.style.border = '3px solid transparent';
@@ -255,7 +263,7 @@
       selectedAccessoryType = 'purse';
       purseOptions.forEach((fn) => {
         const img = document.createElement('img');
-        img.src = fn;
+        img.src = resolveImageSrc(fn);
         img.alt = fn;
         img.style.width = '120px';
         img.style.height = 'auto';
@@ -274,7 +282,6 @@
     }
     if (purseBtn) purseBtn.addEventListener('click', openPurseModal);
   // Jewellery chooser
-  const jewelleryBtn = document.getElementById('accessory-jewellery');
   const jewelleryOptions = [
     'download (100).jpeg',
     'Arcanist\'s Anklet.jpeg',
@@ -293,7 +300,7 @@
     selectedAccessoryType = 'jewellery';
     jewelleryOptions.forEach((fn) => {
       const img = document.createElement('img');
-      img.src = fn;
+      img.src = resolveImageSrc(fn);
       img.alt = fn;
       img.style.width = '120px';
       img.style.height = 'auto';
@@ -312,7 +319,6 @@
   }
   if (jewelleryBtn) jewelleryBtn.addEventListener('click', openJewelleryModal);
   // Hat chooser
-  const hatBtn = document.getElementById('accessory-hat');
   const hatOptions = [
     'download - 2026-06-21T162842.246.jpeg',
     'download - 2026-06-21T162859.974.jpeg',
@@ -328,7 +334,7 @@
     selectedAccessoryType = 'hat';
     hatOptions.forEach((fn) => {
       const img = document.createElement('img');
-      img.src = fn;
+      img.src = resolveImageSrc(fn);
       img.alt = fn;
       img.style.width = '120px';
       img.style.height = 'auto';
