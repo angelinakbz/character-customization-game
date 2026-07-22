@@ -10,11 +10,11 @@
     .wrap{max-width:900px;margin:24px auto;padding:16px;text-align:center}
     .canvas{position:relative;width:360px;height:540px;margin:12px auto;background:linear-gradient(#fff,#fff);border-radius:12px}
     .char-img{width:100%;height:100%;object-fit:contain;border-radius:12px;position:relative;z-index:1}
-    .overlay{position:absolute;pointer-events:none;z-index:2;mix-blend-mode:multiply;opacity:0.95;background:transparent}
-    .overlay.glasses{left:50%;top:30%;transform:translate(-50%, -10%);width:48%;}
-    .overlay.hat{left:50%;top:6%;transform:translate(-50%, -10%);width:60%;}
-    .overlay.purse{right:8%;bottom:10%;width:36%;transform:translateY(0);} 
-    .overlay.jewellery{left:50%;top:58%;transform:translate(-50%, -50%);width:40%;}
+    .overlay{position:absolute;pointer-events:none;z-index:2;mix-blend-mode:multiply;opacity:0.95;background:transparent;object-fit:contain}
+    .overlay.glasses{left:50%;top:31%;transform:translate(-50%, -50%);width:44%;}
+    .overlay.hat{left:50%;top:7%;transform:translateX(-50%);width:58%;}
+    .overlay.purse{right:9%;bottom:11%;width:28%;transform:rotate(-6deg);} 
+    .overlay.jewellery{left:50%;top:57%;transform:translate(-50%, -50%);width:34%;}
     .meta{margin-top:8px}
     .btn{padding:8px 12px;border-radius:8px;border:none;background:#ff66b2;color:#fff}
   </style>
@@ -33,53 +33,79 @@
   const params = new URLSearchParams(window.location.search);
   const idxParam = params.get('purchase') || params.get('idx');
   const purchases = JSON.parse(localStorage.getItem('purchases')||'[]');
-  let idx = Number(idxParam);
-  // if no direct index provided, allow selecting by viewPurchaseTime (set by purchases page)
-  if (isNaN(idx)){
-    const t = Number(localStorage.getItem('viewPurchaseTime') || '0') || 0;
-    if (t){
-      // find matching purchase by time
-      for (let i=0;i<purchases.length;i++){ if (Number(purchases[i].time) === t){ idx = i; break; } }
-      try{ localStorage.removeItem('viewPurchaseTime'); }catch(e){}
-    }
+  const normalizedPurchases = (Array.isArray(purchases) ? purchases : []).filter(Boolean);
+  const validPurchases = normalizedPurchases
+    .map((p, i) => ({ purchase: p, index: i }))
+    .filter(({ purchase }) => purchase && Array.isArray(purchase.items) && purchase.items.length > 0)
+    .sort((a, b) => (Number(b.purchase.time) || 0) - (Number(a.purchase.time) || 0));
+
+  function sanitizePurchase(p){
+    return {
+      time: Number(p.time) || Date.now(),
+      total: Number(p.total) || 0,
+      items: Array.isArray(p.items) ? p.items.filter(it => it && it.filename && String(it.filename).trim() !== '' && String(it.filename) !== 'undefined').map(it => ({ ...it, filename: String(it.filename) })) : [],
+      char: p.char || '',
+      pet: p.pet || '',
+      house: p.house || ''
+    };
   }
-  if (isNaN(idx) || idx < 0 || idx >= purchases.length) idx = purchases.length - 1; // default to latest
-  let purchase = purchases[idx] || null;
+
+  function getOverlayClassName(type){
+    const normalized = String(type || '').toLowerCase().trim();
+    if (normalized.includes('glass')) return 'glasses';
+    if (normalized.includes('hat')) return 'hat';
+    if (normalized.includes('jewel') || normalized.includes('neck')) return 'jewellery';
+    if (normalized.includes('purse') || normalized.includes('bag')) return 'purse';
+    return normalized || 'item';
+  }
+
+  let idx = Number(idxParam);
+  let purchase = null;
+  const viewTime = Number(localStorage.getItem('viewPurchaseTime') || '0') || 0;
+  if (viewTime && validPurchases.length){
+    const matching = validPurchases.find(({ purchase }) => Number(purchase.time) === viewTime);
+    if (matching){ purchase = matching.purchase; idx = matching.index; }
+  }
+  if (!purchase && validPurchases.length){
+    const latest = validPurchases[0];
+    purchase = latest.purchase; idx = latest.index;
+  }
+
   const charImg = document.getElementById('charImg');
   const canvas = document.getElementById('canvas');
-  // If purchase wasn't found, try fallbacks: match by nearby time or pick latest accessory purchase
+  let selectedCharacter = '';
+  try{ selectedCharacter = localStorage.getItem('selectedCharacter') || ''; }catch(e){}
+  let selectedOutfit = null;
+  try{ selectedOutfit = JSON.parse(localStorage.getItem('selectedOutfit') || '{}'); }catch(e){ selectedOutfit = null; }
+
   if (!purchase){
-    const viewTime = Number(localStorage.getItem('viewPurchaseTime') || '0') || 0;
-    let found = null;
-    if (viewTime){
-      // try exact or near-exact match
-      for (let i=0;i<purchases.length;i++){
-        const p = purchases[i];
-        if (!p) continue;
-        const t = Number(p.time) || 0;
-        if (t === viewTime || Math.abs(t - viewTime) < 3000){ found = p; idx = i; break; }
-      }
-      try{ localStorage.removeItem('viewPurchaseTime'); }catch(e){}
-    }
-    if (!found){
-      // fallback: find latest purchase that has accessory items
-      for (let i=purchases.length-1;i>=0;i--){ const p = purchases[i]; if (p && Array.isArray(p.items) && p.items.length>0){ found = p; idx = i; break; } }
-    }
-    if (!found){
-      canvas.innerHTML = '<div style="padding:24px;color:#666">No accessory purchase data available. <br><br><button id="go-purchases" class="btn">Go to Purchases</button></div>';
-      const btn = document.getElementById('go-purchases'); if (btn) btn.addEventListener('click', ()=> window.location.href='purchases.html');
-      return;
-    }
-    // use found purchase
-    purchase = found;
+    canvas.innerHTML = '<div style="padding:24px;color:#666">No accessory purchase data available. <br><br><button id="go-purchases" class="btn">Go to Purchases</button></div>';
+    const btn = document.getElementById('go-purchases'); if (btn) btn.addEventListener('click', ()=> window.location.href='purchases.html');
+    return;
   }
+  purchase = sanitizePurchase(purchase); 
+  try{ localStorage.setItem('purchases', JSON.stringify([purchase])); }catch(e){}
+
+  function trySetCharacterImage(src){
+    if (!src) { charImg.src=''; charImg.style.background='#fff'; return; }
+    charImg.style.display = 'block';
+    charImg.onerror = function(){
+      try{ const alt = decodeURIComponent(src); if (alt !== src){ charImg.onerror=null; charImg.src = alt; return; } }catch(e){}
+      try{ const alt2 = decodeURI(src); if (alt2 !== src){ charImg.onerror=null; charImg.src = alt2; return; } }catch(e){}
+      try{ const alt3 = src.replace(/%20/g,' '); if (alt3 !== src){ charImg.onerror=null; charImg.src = alt3; return; } }catch(e){}
+      charImg.style.display = 'none';
+    };
+    charImg.src = src;
+  }
+
   // show char or placeholder
-  if (purchase.char){ charImg.src = purchase.char; } else { charImg.src = ''; charImg.style.background='#fff'; }
+  const characterSource = (selectedOutfit && selectedOutfit.char) ? selectedOutfit.char : (purchase.char || selectedCharacter || '');
+  if (characterSource){ trySetCharacterImage(characterSource); } else { charImg.src = ''; charImg.style.background='#fff'; }
 
   // add accessory overlays
   (purchase.items||[]).forEach(it=>{
     const img = document.createElement('img'); img.alt = it.type || '';
-    img.className = 'overlay ' + (it.type || '');
+    img.className = 'overlay ' + getOverlayClassName(it.type || '');
     // process image to remove white background before appending
     processImageToTrimWhite(it.filename || '', function(dataUrl){ img.src = dataUrl; canvas.appendChild(img); });
   });

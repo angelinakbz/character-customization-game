@@ -60,33 +60,34 @@
   const earned = parseInt(localStorage.getItem('earned')||'0',10) || 0;
   balEl.textContent = earned;
 
-  // only show purchases that include accessory items
-  const accessoryPurchases = purchases.filter(p => Array.isArray(p.items) && p.items.length > 0);
-  if (!accessoryPurchases.length){
+  // only show the latest purchase that includes accessory items
+  const accessoryPurchases = purchases
+    .filter(p => Array.isArray(p.items) && p.items.length > 0)
+    .sort((a, b) => (Number(b.time) || 0) - (Number(a.time) || 0));
+  const latestAccessoryPurchase = accessoryPurchases[0] || null;
+  if (!latestAccessoryPurchase){
     list.innerHTML = '<div style="text-align:center;color:#666;padding:12px">No accessory purchases yet.</div>';
   } else {
-    accessoryPurchases.forEach((p,i)=>{
-      const el = document.createElement('div'); el.className='purchase';
-      const d = new Date(p.time);
-      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-        <div style="font-weight:800">$${p.total} — ${d.toLocaleString()}</div>
-        <div>${p.char ? '<img src="'+p.char+'" style="width:48px;height:auto;border-radius:6px">' : ''} ${p.pet ? '<img src="'+p.pet+'" style="width:48px;height:auto;border-radius:6px;margin-left:6px">' : ''}</div>
-      </div>`;
-      const itemsWrap = document.createElement('div'); itemsWrap.className='items';
-      (p.items||[]).forEach(it=>{
-        const img = document.createElement('img'); img.src = it.filename || ''; img.alt = it.type || '';
-        itemsWrap.appendChild(img);
-      });
-      // wear button: store the purchase time and open outfit page which will look it up
-      const wearBtn = document.createElement('button'); wearBtn.className='btn'; wearBtn.textContent='Wear your accessories';
-      wearBtn.addEventListener('click', ()=>{
-        try{ localStorage.setItem('viewPurchaseTime', String(p.time)); }catch(e){}
-        window.location.href = 'outfit.html';
-      });
-      el.appendChild(itemsWrap);
-      el.appendChild(wearBtn);
-      list.appendChild(el);
+    const p = latestAccessoryPurchase;
+    const el = document.createElement('div'); el.className='purchase';
+    const d = new Date(p.time);
+    el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:800">$${p.total} — ${d.toLocaleString()}</div>
+      <div>${p.char ? '<img src="'+p.char+'" style="width:48px;height:auto;border-radius:6px">' : ''} ${p.pet ? '<img src="'+p.pet+'" style="width:48px;height:auto;border-radius:6px;margin-left:6px">' : ''}</div>
+    </div>`;
+    const itemsWrap = document.createElement('div'); itemsWrap.className='items';
+    (p.items||[]).forEach(it=>{
+      const img = document.createElement('img'); img.src = it.filename || ''; img.alt = it.type || '';
+      itemsWrap.appendChild(img);
     });
+    const wearBtn = document.createElement('button'); wearBtn.className='btn'; wearBtn.textContent='Wear your accessories';
+    wearBtn.addEventListener('click', ()=>{
+      try{ localStorage.setItem('viewPurchaseTime', String(p.time)); }catch(e){}
+      window.location.href = 'outfit.html';
+    });
+    el.appendChild(itemsWrap);
+    el.appendChild(wearBtn);
+    list.appendChild(el);
   }
 
   document.getElementById('to-shop').addEventListener('click', ()=> window.location.href='accessories.html');
@@ -94,14 +95,13 @@
   if (wearLatest){
     wearLatest.addEventListener('click', ()=>{
       const purchasesArr = JSON.parse(localStorage.getItem('purchases')||'[]');
-      // find last purchase that has accessory items
-      for (let i = purchasesArr.length - 1; i >= 0; i--){
-        const p = purchasesArr[i];
-        if (p && Array.isArray(p.items) && p.items.length > 0){
-          try{ localStorage.setItem('viewPurchaseTime', String(p.time)); }catch(e){}
-          window.location.href = 'outfit.html';
-          return;
-        }
+      const latest = (Array.isArray(purchasesArr) ? purchasesArr : [])
+        .filter(p => p && Array.isArray(p.items) && p.items.length > 0)
+        .sort((a, b) => (Number(b.time) || 0) - (Number(a.time) || 0))[0];
+      if (latest){
+        try{ localStorage.setItem('viewPurchaseTime', String(latest.time)); }catch(e){}
+        window.location.href = 'outfit.html';
+        return;
       }
       return alert('No accessory purchases to wear');
     });
